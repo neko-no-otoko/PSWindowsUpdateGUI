@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>PSWindowsUpdateGUI</AssemblyName>
+    <RootNamespace>PSWindowsUpdateGui</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>PSWindowsUpdate GUI</Product>
+    <Description>Portable graphical interface for PSWindowsUpdate.</Description>
+    <Copyright>Copyright (c) 2026 PSWindowsUpdateGUI contributors</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Management.Automation">
+      <HintPath>$(SystemRoot)\Microsoft.NET\assembly\GAC_MSIL\System.Management.Automation\v4.0_3.0.0.0__31bf3856ad364e35\System.Management.Automation.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Runtime.Serialization" />
+    <EmbeddedResource Include="Resources\PSWindowsUpdate.2.2.1.5.nupkg" LogicalName="PSWindowsUpdateGui.Resources.PSWindowsUpdate.nupkg" />
+    <EmbeddedResource Include="Resources\vendor-manifest.json" LogicalName="PSWindowsUpdateGui.Resources.vendor-manifest.json" />
+  </ItemGroup>
+</Project>

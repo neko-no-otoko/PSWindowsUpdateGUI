@@ -1,0 +1,11 @@
+.vs/
+.tools/
+artifacts/
+**/bin/
+**/obj/
+TestResults/
+*.user
+*.suo
+*.pfx
+*.snk
+PSWindowsUpdateGUI.Data/
