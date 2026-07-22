@@ -30,15 +30,6 @@ $document = [ordered]@{
             licenseConcluded = 'MIT'
             licenseDeclared = 'MIT'
             checksums = @([ordered]@{ algorithm = 'SHA256'; checksumValue = $hash })
-        },
-        [ordered]@{
-            name = 'PSWindowsUpdate'
-            SPDXID = 'SPDXRef-Package-PSWindowsUpdate'
-            versionInfo = '2.2.1.5'
-            downloadLocation = 'https://www.powershellgallery.com/packages/PSWindowsUpdate/2.2.1.5'
-            filesAnalyzed = $false
-            licenseConcluded = 'MIT'
-            licenseDeclared = 'MIT'
         }
     )
     files = @([ordered]@{
@@ -49,7 +40,6 @@ $document = [ordered]@{
     })
     relationships = @(
         [ordered]@{ spdxElementId = 'SPDXRef-DOCUMENT'; relationshipType = 'DESCRIBES'; relatedSpdxElement = 'SPDXRef-Package-GUI' },
-        [ordered]@{ spdxElementId = 'SPDXRef-Package-GUI'; relationshipType = 'CONTAINS'; relatedSpdxElement = 'SPDXRef-Package-PSWindowsUpdate' },
         [ordered]@{ spdxElementId = 'SPDXRef-Package-GUI'; relationshipType = 'CONTAINS'; relatedSpdxElement = 'SPDXRef-File-Executable' }
     )
 }

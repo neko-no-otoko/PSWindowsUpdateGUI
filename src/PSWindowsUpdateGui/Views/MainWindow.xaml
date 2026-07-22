@@ -1,230 +1,36 @@
 <Window x:Class="PSWindowsUpdateGui.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="PSWindowsUpdate GUI" Height="860" Width="1280" MinHeight="700" MinWidth="980"
-        WindowStartupLocation="CenterScreen">
+        Title="PSWindowsUpdate GUI" Height="860" Width="1280" MinHeight="700" MinWidth="980" WindowStartupLocation="CenterScreen">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="150" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="145"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Border Grid.Row="0" Background="#172033" Padding="12">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="PSWindowsUpdate GUI" FontSize="22" FontWeight="SemiBold" Foreground="White" />
-                    <TextBlock Foreground="#C9D3E7">
-                        <Run Text="Module " /><Run Text="{Binding ModuleVersion, Mode=OneWay}" /><Run Text=" • " />
-                        <Run Text="{Binding Identity, Mode=OneWay}" /><Run Text=" • Administrator" />
-                    </TextBlock>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <CheckBox Content="Target a different computer" IsChecked="{Binding IsRemote}" Foreground="White" />
-                    <TextBox Width="230" Text="{Binding ComputerName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsRemote}"
-                             AutomationProperties.Name="Remote computer DNS name" />
-                    <CheckBox Content="WinRM HTTPS" IsChecked="{Binding UseWinRmHttps}" IsEnabled="{Binding IsRemote}"
-                              ToolTip="Use certificate-validated WinRM HTTPS for the connection preflight" />
-                    <Button Content="Test target" Command="{Binding TestTargetCommand}" />
-                    <Button Content="Clean temporary remote module" Command="{Binding CleanupRemoteModuleCommand}" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding TargetDisplay}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <Button Content="About" Click="About_Click" Margin="10,0,0,0" Padding="8,2" />
-                    </StackPanel>
-                    <TextBlock Text="{Binding PersistenceNotice}" Foreground="#C9D3E7" FontSize="11" MaxWidth="330" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel><TextBlock Text="PSWindowsUpdate GUI" FontSize="22" FontWeight="SemiBold" Foreground="White"/><TextBlock Foreground="#C9D3E7"><Run Text="{Binding EngineVersion, Mode=OneWay}"/><Run Text=" • "/><Run Text="{Binding Identity, Mode=OneWay}"/><Run Text=" • "/><Run Text="{Binding ElevationDisplay, Mode=OneWay}"/></TextBlock></StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"><CheckBox Content="Remote target" IsChecked="{Binding IsRemote}" Foreground="White"/><TextBox Width="160" Text="{Binding ComputerName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsRemote}" AutomationProperties.Name="Remote computer DNS name"/><CheckBox Content="HTTPS" IsChecked="{Binding UseWinRmHttps}" IsEnabled="{Binding IsRemote}" Foreground="White"/><Button Content="Test" Command="{Binding TestTargetCommand}"/></StackPanel>
+                <StackPanel Grid.Column="2" HorizontalAlignment="Right"><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock Text="{Binding TargetDisplay}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center"/><Button Content="About" Click="About_Click" Margin="10,0,0,0" Padding="8,2"/></StackPanel><TextBlock Text="{Binding PersistenceNotice}" Foreground="#C9D3E7" FontSize="11" MaxWidth="330" TextTrimming="CharacterEllipsis"/></StackPanel>
             </Grid>
         </Border>
-
-        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="6">
+        <TabControl Grid.Row="1" Margin="6">
             <TabItem Header="Updates">
                 <Grid Margin="6">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <GroupBox Header="Scan options">
-                        <WrapPanel>
-                            <TextBlock Text="Source" VerticalAlignment="Center" Margin="5" />
-                            <ComboBox Width="175" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" />
-                            <TextBlock Text="Title regex" VerticalAlignment="Center" Margin="5" />
-                            <TextBox Width="220" Text="{Binding TitleFilter}" />
-                            <TextBlock Text="KB IDs" VerticalAlignment="Center" Margin="5" />
-                            <TextBox Width="170" Text="{Binding KBFilter}" ToolTip="Comma-separated KB article IDs" />
-                            <CheckBox Content="Drivers only" IsChecked="{Binding DriversOnly}" />
-                            <CheckBox Content="Include hidden" IsChecked="{Binding IncludeHidden}" />
-                            <Button Content="Scan" Command="{Binding ScanCommand}" Background="{StaticResource AccentBrush}" Foreground="White" />
-                        </WrapPanel>
-                    </GroupBox>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Updates}" AutoGenerateColumns="False" CanUserAddRows="False"
-                              IsReadOnly="False" SelectionMode="Extended" HeadersVisibility="Column" Margin="5"
-                              EnableRowVirtualization="True" AutomationProperties.Name="Available Windows updates">
-                        <DataGrid.Columns>
-                            <DataGridCheckBoxColumn Header="Select" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="60" />
-                            <DataGridTextColumn Header="Computer" Binding="{Binding ComputerName, Mode=OneWay}" IsReadOnly="True" Width="110" />
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" IsReadOnly="True" Width="90" />
-                            <DataGridTextColumn Header="KB" Binding="{Binding KB, Mode=OneWay}" IsReadOnly="True" Width="130" />
-                            <DataGridTextColumn Header="Size" Binding="{Binding Size, Mode=OneWay}" IsReadOnly="True" Width="90" />
-                            <DataGridTextColumn Header="Title" Binding="{Binding Title, Mode=OneWay}" IsReadOnly="True" Width="*" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="Automatic reboot is disabled in the guided workflow." VerticalAlignment="Center" Margin="8" />
-                        <Button Content="Hide" Command="{Binding HideCommand}" />
-                        <Button Content="Unhide" Command="{Binding UnhideCommand}" />
-                        <Button Content="Download" Command="{Binding DownloadCommand}" />
-                        <Button Content="Install selected" Command="{Binding InstallCommand}" Background="{StaticResource AccentBrush}" Foreground="White" />
-                    </StackPanel>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <GroupBox Header="Scan options"><WrapPanel><TextBlock Text="Source" VerticalAlignment="Center" Margin="5"/><ComboBox Width="175" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}"/><TextBlock Text="Title regex" VerticalAlignment="Center" Margin="5"/><TextBox Width="220" Text="{Binding TitleFilter}"/><TextBlock Text="KB IDs" VerticalAlignment="Center" Margin="5"/><TextBox Width="160" Text="{Binding KBFilter}"/><CheckBox Content="Drivers only" IsChecked="{Binding DriversOnly}"/><CheckBox Content="Include hidden" IsChecked="{Binding IncludeHidden}"/><CheckBox Content="Accept unaccepted license terms" IsChecked="{Binding AcceptEulas}"/><Button Content="Scan" Command="{Binding ScanCommand}" Background="{StaticResource AccentBrush}" Foreground="White"/></WrapPanel></GroupBox>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Updates}" AutoGenerateColumns="False" CanUserAddRows="False" Margin="5" EnableRowVirtualization="True" AutomationProperties.Name="Available Windows updates"><DataGrid.Columns><DataGridCheckBoxColumn Header="Select" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="60"/><DataGridTextColumn Header="Type" Binding="{Binding Type, Mode=OneWay}" IsReadOnly="True" Width="75"/><DataGridTextColumn Header="KB" Binding="{Binding Kb, Mode=OneWay}" IsReadOnly="True" Width="130"/><DataGridTextColumn Header="Size" Binding="{Binding Size, Mode=OneWay}" IsReadOnly="True" Width="90"/><DataGridTextColumn Header="Provider" Binding="{Binding DriverProvider, Mode=OneWay}" IsReadOnly="True" Width="120"/><DataGridTextColumn Header="Version" Binding="{Binding DriverVersion, Mode=OneWay}" IsReadOnly="True" Width="110"/><DataGridTextColumn Header="Title" Binding="{Binding Title, Mode=OneWay}" IsReadOnly="True" Width="*"/></DataGrid.Columns></DataGrid>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock Text="Selections are revalidated by GUID and revision. Automatic reboot is disabled." VerticalAlignment="Center" Margin="8"/><Button Content="Hide" Command="{Binding HideCommand}"/><Button Content="Unhide" Command="{Binding UnhideCommand}"/><Button Content="Download" Command="{Binding DownloadCommand}"/><Button Content="Uninstall" Command="{Binding UninstallCommand}"/><Button Content="Install selected" Command="{Binding InstallCommand}" Background="{StaticResource AccentBrush}" Foreground="White"/></StackPanel>
                 </Grid>
             </TabItem>
-
-            <TabItem Header="History &amp; Status">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <WrapPanel Margin="12">
-                        <Button Content="Update history" Command="{Binding QuickCommand}" CommandParameter="Get-WUHistory" />
-                        <Button Content="Last results" Command="{Binding QuickCommand}" CommandParameter="Get-WULastResults" />
-                        <Button Content="API version" Command="{Binding QuickCommand}" CommandParameter="Get-WUApiVersion" />
-                        <Button Content="Installer status" Command="{Binding QuickCommand}" CommandParameter="Get-WUInstallerStatus" />
-                        <Button Content="Reboot status" Command="{Binding QuickCommand}" CommandParameter="Get-WURebootStatus" />
-                        <Button Content="Scheduled WU jobs" Command="{Binding QuickCommand}" CommandParameter="Get-WUJob" />
-                        <Button Content="Service managers" Command="{Binding QuickCommand}" CommandParameter="Get-WUServiceManager" />
-                        <Button Content="Windows Update settings" Command="{Binding QuickCommand}" CommandParameter="Get-WUSettings" />
-                    </WrapPanel>
-                </ScrollViewer>
-            </TabItem>
-
+            <TabItem Header="History &amp; Status"><StackPanel Margin="16"><TextBlock Text="Status and history are read directly from Windows Update Agent. WUA operations may not appear in the Windows Settings orchestrator UI." TextWrapping="Wrap" Margin="0,0,0,12"/><WrapPanel><Button Content="Refresh status" Command="{Binding RefreshStatusCommand}"/><Button Content="Update history" Command="{Binding HistoryCommand}"/><Button Content="Registered services" Command="{Binding ServicesCommand}"/></WrapPanel></StackPanel></TabItem>
             <TabItem Header="Services &amp; Policies">
-                <StackPanel Margin="16">
-                    <TextBlock Text="These operations can change persistent Windows Update services and policy. Configure the exact parameter set in Advanced before execution."
-                               TextWrapping="Wrap" Margin="0,0,0,12" />
-                    <WrapPanel>
-                        <Button Content="Add update service" Command="{Binding SelectAdvancedCommand}" CommandParameter="Add-WUServiceManager" Click="NavigateAdvanced_Click" />
-                        <Button Content="Remove update service" Command="{Binding SelectAdvancedCommand}" CommandParameter="Remove-WUServiceManager" Click="NavigateAdvanced_Click" />
-                        <Button Content="Inspect settings" Command="{Binding SelectAdvancedCommand}" CommandParameter="Get-WUSettings" Click="NavigateAdvanced_Click" />
-                        <Button Content="Edit update policy" Command="{Binding SelectAdvancedCommand}" CommandParameter="Set-WUSettings" Click="NavigateAdvanced_Click" />
-                        <Button Content="Mail/report settings" Command="{Binding SelectAdvancedCommand}" CommandParameter="Set-PSWUSettings" Click="NavigateAdvanced_Click" />
-                    </WrapPanel>
-                </StackPanel>
+                <Grid Margin="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><WrapPanel><Button Content="List update services" Command="{Binding ServicesCommand}"/><Button Content="Register Microsoft Update" Command="{Binding AddMicrosoftUpdateCommand}"/></WrapPanel><TextBlock Grid.Row="1" Text="Policy changes (one validated Name=Value per line; use Name=remove to delete):" Margin="4,12,4,4"/><TextBox Grid.Row="2" Text="{Binding PolicyChanges, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" FontFamily="Consolas" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Windows Update policy changes"/><StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Preview policy" Command="{Binding PreviewPolicyCommand}"/><Button Content="Apply policy" Command="{Binding ApplyPolicyCommand}" Background="{StaticResource AccentBrush}" Foreground="White"/></StackPanel></Grid>
             </TabItem>
-
-            <TabItem Header="Offline &amp; Maintenance">
-                <StackPanel Margin="16">
-                    <TextBlock Text="Maintenance operations are intentionally routed through the complete Advanced form and confirmation summary."
-                               TextWrapping="Wrap" Margin="0,0,0,12" />
-                    <WrapPanel>
-                        <Button Content="Download offline MSU" Command="{Binding SelectAdvancedCommand}" CommandParameter="Get-WUOfflineMSU" Click="NavigateAdvanced_Click" />
-                        <Button Content="Uninstall update" Command="{Binding SelectAdvancedCommand}" CommandParameter="Remove-WindowsUpdate" Click="NavigateAdvanced_Click" />
-                        <Button Content="Reset update components" Command="{Binding SelectAdvancedCommand}" CommandParameter="Reset-WUComponents" Click="NavigateAdvanced_Click" />
-                        <Button Content="Configure remoting" Command="{Binding SelectAdvancedCommand}" CommandParameter="Enable-WURemoting" Click="NavigateAdvanced_Click" />
-                        <Button Content="Update module" Command="{Binding SelectAdvancedCommand}" CommandParameter="Update-WUModule" Click="NavigateAdvanced_Click" />
-                        <Button Content="Create scheduled WU job" Command="{Binding SelectAdvancedCommand}" CommandParameter="Invoke-WUJob" Click="NavigateAdvanced_Click" />
-                    </WrapPanel>
-                </StackPanel>
-            </TabItem>
-
-            <TabItem x:Name="AdvancedTab" Header="Advanced">
-                <Grid Margin="8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="320" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="250" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Command" VerticalAlignment="Center" Margin="5" />
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Commands}" SelectedItem="{Binding SelectedCommand}" />
-                        <TextBlock Grid.Column="2" Text="Parameter set" VerticalAlignment="Center" Margin="5" />
-                        <ComboBox Grid.Column="3" ItemsSource="{Binding ParameterSets}" SelectedItem="{Binding SelectedParameterSet}" />
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <CheckBox Content="Verbose" IsChecked="{Binding AdvancedVerbose}" />
-                            <CheckBox Content="WhatIf" IsChecked="{Binding AdvancedWhatIf}" />
-                        </StackPanel>
-                    </Grid>
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6">
-                        <ItemsControl ItemsSource="{Binding AdvancedInputs}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="#D8DEE9" BorderThickness="0,0,0,1" Padding="4">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="75" />
-                                                <ColumnDefinition Width="210" />
-                                                <ColumnDefinition Width="110" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="220" />
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox IsChecked="{Binding IsBound}" Content="Include" ToolTip="Required parameters remain included." />
-                                            <TextBlock Grid.Column="1" Text="{Binding Name, StringFormat=-{0}}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="2" Text="{Binding TypeLabel}" VerticalAlignment="Center" Foreground="#5A6475" />
-                                            <Grid Grid.Column="3">
-                                                <TextBox Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsBound}"
-                                                         Visibility="{Binding UsesTextEditor, Converter={StaticResource BoolToVisibility}}" />
-                                                <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding ValueText}" IsEnabled="{Binding IsBound}"
-                                                          Visibility="{Binding UsesChoiceEditor, Converter={StaticResource BoolToVisibility}}" />
-                                                <StackPanel Orientation="Horizontal" Visibility="{Binding UsesCredentialEditor, Converter={StaticResource BoolToVisibility}}">
-                                                    <Button Content="Set credential…" Click="Credential_Click" />
-                                                    <TextBlock Text="{Binding CredentialSummary}" VerticalAlignment="Center" Margin="6" />
-                                                </StackPanel>
-                                            </Grid>
-                                            <TextBlock Grid.Column="4" Text="{Binding Constraint}" VerticalAlignment="Center" Foreground="#5A6475" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                    <TextBlock Grid.Row="2" Text="{Binding RemoteCompatibility}" Foreground="#9A6500" Margin="5" />
-                    <Grid Grid.Row="3">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding CommandPreview, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MinHeight="55" VerticalScrollBarVisibility="Auto"
-                                 AutomationProperties.Name="Redacted PowerShell command preview" />
-                        <Button Grid.Column="1" Content="Run command" Command="{Binding RunAdvancedCommand}" Background="{StaticResource AccentBrush}" Foreground="White" />
-                    </Grid>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Logs">
-                <Grid Margin="8">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Export visible log…" Click="ExportLogs_Click" />
-                        <Button Content="Clear logs" Command="{Binding ClearLogsCommand}" />
-                    </StackPanel>
-                    <TextBox Grid.Row="1" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
-                             AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
-                </Grid>
-            </TabItem>
+            <TabItem Header="Offline &amp; Maintenance"><StackPanel Margin="16"><TextBlock Text="Offline CAB scans assess security update applicability only; wsusscn2.cab does not contain update payloads." TextWrapping="Wrap" Margin="0,0,0,10"/><DockPanel IsEnabled="{Binding IsLocal}"><Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseOfflineCab_Click"/><TextBox Text="{Binding OfflineCabPath}" AutomationProperties.Name="Offline scan CAB path"/></DockPanel><WrapPanel Margin="0,8"><Button Content="Download latest CAB" Command="{Binding DownloadOfflineCatalogCommand}" IsEnabled="{Binding IsLocal}"/><Button Content="Run offline scan" Command="{Binding OfflineScanCommand}" IsEnabled="{Binding IsLocal}"/><Button Content="Reset Windows Update components" Command="{Binding ResetComponentsCommand}"/></WrapPanel><Separator Margin="0,12"/><TextBlock Text="Scheduling, payload export, service removal, policy restore, reporting, and remote automation are available through the same executable's validated CLI. Open Help for exact commands." TextWrapping="Wrap"/><Button Content="CLI help" HorizontalAlignment="Left" Click="CliHelp_Click" Margin="0,8"/></StackPanel></TabItem>
+            <TabItem Header="Operation Explorer"><Grid Margin="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel><TextBlock FontSize="18" FontWeight="SemiBold" Text="Typed operation catalog"/><TextBlock Text="Guided operations and the CLI use this same catalog, validators, and stable JSON contracts. The former arbitrary cmdlet editor has been removed." TextWrapping="Wrap" Margin="0,6,0,14"/></StackPanel><DataGrid Grid.Row="1" ItemsSource="{Binding Operations}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" AutomationProperties.Name="Native operation catalog"><DataGrid.Columns><DataGridTextColumn Header="Operation" Binding="{Binding Name, Mode=OneWay}" Width="160"/><DataGridTextColumn Header="Category" Binding="{Binding Category, Mode=OneWay}" Width="130"/><DataGridCheckBoxColumn Header="Modifies state" Binding="{Binding Mutating, Mode=OneWay}" Width="110"/><DataGridTextColumn Header="Description" Binding="{Binding Description, Mode=OneWay}" Width="*"/></DataGrid.Columns></DataGrid><TextBlock Grid.Row="2" Text="All modifying commands support --plan and require GUI confirmation, an interactive YES, or --yes. Raw scripts are never accepted." TextWrapping="Wrap" Margin="0,14,0,0"/></Grid></TabItem>
+            <TabItem Header="Logs"><Grid Margin="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Export visible log…" Click="ExportLogs_Click"/><Button Content="Clear logs" Command="{Binding ClearLogsCommand}"/></StackPanel><TextBox Grid.Row="1" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/></Grid></TabItem>
         </TabControl>
-
-        <Grid Grid.Row="2" Margin="8,0">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="Cancel / stop monitoring" Command="{Binding CancelCommand}" />
-        </Grid>
-        <TextBox Grid.Row="3" Margin="8" Text="{Binding OutputText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
-                 AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                 AutomationProperties.Name="Command output" />
-        <ProgressBar Grid.Row="4" Height="5" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
+        <Grid Grid.Row="2" Margin="8,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" VerticalAlignment="Center"/><Button Grid.Column="1" Content="Cancel / stop monitoring" Command="{Binding CancelCommand}"/></Grid>
+        <TextBox Grid.Row="3" Margin="8" Text="{Binding OutputText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Operation output"/>
+        <ProgressBar Grid.Row="4" Height="5" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}"/>
     </Grid>
 </Window>

@@ -2,224 +2,121 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
-using System.Security.Principal;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
-using Microsoft.Win32;
+using PSWindowsUpdateGui.Cli;
 using PSWindowsUpdateGui.Models;
 using PSWindowsUpdateGui.Services;
 
 namespace PSWindowsUpdateGui.Acceptance;
 
-internal static class Program
-{
-    private static int Main(string[] args)
-    {
-        try
-        {
-            return RunAsync(args).GetAwaiter().GetResult();
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine(exception);
-            return 1;
-        }
-    }
-
-    private static async Task<int> RunAsync(string[] args)
-    {
-        var outputArgument = args.FirstOrDefault(argument => argument.StartsWith("--output=", StringComparison.OrdinalIgnoreCase));
-        var outputPath = outputArgument?.Substring("--output=".Length) ??
-                         Path.Combine(Environment.CurrentDirectory, "local-acceptance.json");
-        var installFirstSafeDriver = args.Any(argument =>
-            string.Equals(argument, "--install-first-safe-driver", StringComparison.OrdinalIgnoreCase));
-
-        using var identity = WindowsIdentity.GetCurrent();
-        var elevated = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-        if (!elevated)
-        {
-            throw new InvalidOperationException("The local acceptance runner must be elevated.");
-        }
-
-        var report = new AcceptanceReport
-        {
-            StartedUtc = DateTimeOffset.UtcNow,
-            Identity = identity.Name,
-            Elevated = true,
-            WindowsBuild = App.GetWindowsBuildNumber(),
-            RebootPendingBefore = IsRebootPending()
-        };
-
-        var reportDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
-        Directory.CreateDirectory(reportDirectory);
-        var log = new PortableLogService(reportDirectory, new PortableSettings());
-        using var module = ModuleRuntime.Create();
-        using var host = new PowerShellHost(module, log);
-        await host.InitializeAsync().ConfigureAwait(false);
-        var catalog = await host.LoadCatalogAsync().ConfigureAwait(false);
-        report.ModuleVersion = module.Manifest.PackageVersion;
-        report.CatalogCommandCount = catalog.Count;
-
-        foreach (var command in new[]
-                 {
-                     "Get-WUApiVersion", "Get-WUInstallerStatus", "Get-WULastResults",
-                     "Get-WURebootStatus", "Get-WUServiceManager", "Get-WUSettings", "Get-WUJob"
-                 })
-        {
-            var parameters = new Dictionary<string, object?>();
-            if (string.Equals(command, "Get-WURebootStatus", StringComparison.OrdinalIgnoreCase))
-            {
-                parameters["Silent"] = new SwitchParameter(true);
-            }
-
-            report.Operations.Add(await InvokeAsync(host, command, parameters).ConfigureAwait(false));
-        }
-
-        var driverParameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["WindowsUpdate"] = new SwitchParameter(true),
-            ["UpdateType"] = "Driver"
-        };
-        var driverScan = await host.InvokeAsync("Get-WindowsUpdate", driverParameters, CancellationToken.None).ConfigureAwait(false);
-        report.Operations.Add(ToOperation("Get-WindowsUpdate -WindowsUpdate -UpdateType Driver", driverScan));
-        report.DriverCandidates.AddRange(driverScan.Output.Select(UpdateRow.From)
-            .Where(update => !string.IsNullOrWhiteSpace(update.Title))
-            .Select(update => new DriverCandidate
-            {
-                Title = update.Title,
-                UpdateId = update.UpdateId,
-                KB = update.KB,
-                Size = update.Size,
-                Status = update.Status
-            }));
-
-        var filteredParameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["WindowsUpdate"] = new SwitchParameter(true),
-            ["UpdateType"] = "Driver",
-            ["Title"] = "Intel|Lenovo|NVIDIA|Realtek|AMD"
-        };
-        report.Operations.Add(await InvokeAsync(host,
-            "Get-WindowsUpdate",
-            filteredParameters,
-            "Get-WindowsUpdate typed regex-filtered driver scan").ConfigureAwait(false));
-
-        if (installFirstSafeDriver)
-        {
-            var candidate = report.DriverCandidates.FirstOrDefault(driver =>
-                !string.IsNullOrWhiteSpace(driver.UpdateId) &&
-                driver.Title.IndexOf("firmware", StringComparison.OrdinalIgnoreCase) < 0 &&
-                driver.Title.IndexOf("bios", StringComparison.OrdinalIgnoreCase) < 0);
-            if (report.RebootPendingBefore)
-            {
-                report.InstallAttempt = "Skipped: Windows already has a pending reboot.";
-            }
-            else if (candidate == null)
-            {
-                report.InstallAttempt = "Skipped: no non-firmware driver with an UpdateID was offered.";
-            }
-            else
-            {
-                var installParameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["WindowsUpdate"] = new SwitchParameter(true),
-                    ["UpdateType"] = "Driver",
-                    ["UpdateID"] = new[] { candidate.UpdateId },
-                    ["Install"] = new SwitchParameter(true),
-                    ["AcceptAll"] = new SwitchParameter(true),
-                    ["IgnoreReboot"] = new SwitchParameter(true),
-                    ["Confirm"] = false
-                };
-                report.Operations.Add(await InvokeAsync(host,
-                    "Get-WindowsUpdate",
-                    installParameters,
-                    "Install selected driver: " + candidate.Title).ConfigureAwait(false));
-                report.InstallAttempt = "Attempted: " + candidate.Title;
-            }
-        }
-
-        report.RebootPendingAfter = IsRebootPending();
-        report.CompletedUtc = DateTimeOffset.UtcNow;
-        var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
-        File.WriteAllText(outputPath, serializer.Serialize(report));
-        Console.WriteLine(outputPath);
-        return report.Operations.All(operation => operation.Succeeded) ? 0 : 2;
-    }
-
-    private static async Task<AcceptanceOperation> InvokeAsync(
-        PowerShellHost host,
-        string command,
-        IReadOnlyDictionary<string, object?> parameters,
-        string? label = null)
-    {
-        var result = await host.InvokeAsync(command, parameters, CancellationToken.None).ConfigureAwait(false);
-        return ToOperation(label ?? command, result);
-    }
-
-    private static AcceptanceOperation ToOperation(string name, InvocationResult result) => new AcceptanceOperation
-    {
-        Name = name,
-        Succeeded = result.Succeeded,
-        Output = result.Output.Select(value => value.ToString()).ToList(),
-        OutputProperties = result.Output.Select(value => value.Properties.ToDictionary(
-            property => property.Name,
-            property => ReadProperty(property),
-            StringComparer.OrdinalIgnoreCase)).ToList(),
-        Errors = result.Errors.ToList()
-    };
-
-    private static string ReadProperty(PSPropertyInfo property)
-    {
-        try
-        {
-            return property.Value?.ToString() ?? string.Empty;
-        }
-        catch (Exception exception)
-        {
-            return "<error: " + exception.Message + ">";
-        }
-    }
-
-    private static bool IsRebootPending()
-    {
-        using var localMachine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-        return localMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") != null ||
-               localMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired") != null;
-    }
-}
-
+[DataContract]
 internal sealed class AcceptanceReport
 {
-    public DateTimeOffset StartedUtc { get; set; }
-    public DateTimeOffset CompletedUtc { get; set; }
-    public string Identity { get; set; } = string.Empty;
-    public bool Elevated { get; set; }
-    public int WindowsBuild { get; set; }
-    public string ModuleVersion { get; set; } = string.Empty;
-    public int CatalogCommandCount { get; set; }
-    public bool RebootPendingBefore { get; set; }
-    public bool RebootPendingAfter { get; set; }
-    public string InstallAttempt { get; set; } = "Not requested";
-    public List<AcceptanceOperation> Operations { get; } = new List<AcceptanceOperation>();
-    public List<DriverCandidate> DriverCandidates { get; } = new List<DriverCandidate>();
+    [DataMember(Name = "startedUtc", Order = 1)] public DateTime StartedUtc { get; set; } = DateTime.UtcNow;
+    [DataMember(Name = "completedUtc", Order = 2)] public DateTime CompletedUtc { get; set; }
+    [DataMember(Name = "computerName", Order = 3)] public string ComputerName { get; set; } = Environment.MachineName;
+    [DataMember(Name = "operations", Order = 4)] public IList<AcceptanceOperation> Operations { get; set; } = new List<AcceptanceOperation>();
+    [DataMember(Name = "drivers", Order = 5)] public IList<UpdateRecord> Drivers { get; set; } = new List<UpdateRecord>();
 }
 
+[DataContract]
 internal sealed class AcceptanceOperation
 {
-    public string Name { get; set; } = string.Empty;
-    public bool Succeeded { get; set; }
-    public List<string> Output { get; set; } = new List<string>();
-    public List<Dictionary<string, string>> OutputProperties { get; set; } = new List<Dictionary<string, string>>();
-    public List<string> Errors { get; set; } = new List<string>();
+    [DataMember(Name = "name", Order = 1)] public string Name { get; set; } = string.Empty;
+    [DataMember(Name = "succeeded", Order = 2)] public bool Succeeded { get; set; }
+    [DataMember(Name = "detail", Order = 3)] public string Detail { get; set; } = string.Empty;
 }
 
-internal sealed class DriverCandidate
+internal static class Program
 {
-    public string Title { get; set; } = string.Empty;
-    public string UpdateId { get; set; } = string.Empty;
-    public string KB { get; set; } = string.Empty;
-    public string Size { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    public static async Task<int> Main(string[] args)
+    {
+        var report = new AcceptanceReport();
+        using var engine = new WuaWindowsUpdateEngine();
+        try
+        {
+            var status = await engine.GetStatusAsync(CancellationToken.None).ConfigureAwait(false);
+            report.Operations.Add(new AcceptanceOperation { Name = "status", Succeeded = true, Detail = $"WUA {status.AgentVersion}; service={status.UpdateServiceStatus}; reboot={status.RebootRequired}; busy={status.InstallerBusy}" });
+
+            var updates = await engine.ScanAsync(new ScanRequest(), null, CancellationToken.None).ConfigureAwait(false);
+            report.Operations.Add(new AcceptanceOperation { Name = "default-scan", Succeeded = true, Detail = $"{updates.Count} applicable update(s)" });
+
+            var drivers = await engine.ScanAsync(new ScanRequest { Type = UpdateKind.Driver, IncludeHidden = true }, null, CancellationToken.None).ConfigureAwait(false);
+            report.Drivers = drivers.ToList();
+            report.Operations.Add(new AcceptanceOperation { Name = "driver-scan", Succeeded = true, Detail = $"{drivers.Count} applicable driver update(s)" });
+
+            if (drivers.Count > 0)
+            {
+                var planned = await engine.ExecuteAsync(new UpdateActionRequest
+                {
+                    Action = UpdateActionKind.Install,
+                    Updates = new[] { drivers[0].Identity },
+                    AcceptEulas = true,
+                    PlanOnly = true
+                }, null, CancellationToken.None).ConfigureAwait(false);
+                report.Operations.Add(new AcceptanceOperation
+                {
+                    Name = "specific-driver-plan",
+                    Succeeded = planned.Result == "Planned" && planned.Updates.Count == 1,
+                    Detail = $"{drivers[0].Identity}; {drivers[0].DriverProvider}; {drivers[0].DriverVersion}; {planned.Result}"
+                });
+
+                var previousOutput = Console.Out;
+                using var cliOutput = new StringWriter();
+                int cliExitCode;
+                try
+                {
+                    Console.SetOut(cliOutput);
+                    cliExitCode = await new CliApplication().RunAsync(new[]
+                    {
+                        "install", "--update", drivers[0].Identity.ToString(), "--plan", "--output", "json"
+                    }).ConfigureAwait(false);
+                }
+                finally { Console.SetOut(previousOutput); }
+                using var json = new MemoryStream(Encoding.UTF8.GetBytes(cliOutput.ToString()));
+                var cliEnvelope = (OperationEnvelope<UpdateActionResult>?)new DataContractJsonSerializer(typeof(OperationEnvelope<UpdateActionResult>)).ReadObject(json);
+                report.Operations.Add(new AcceptanceOperation
+                {
+                    Name = "specific-driver-cli-json-plan",
+                    Succeeded = cliExitCode == 0 && cliEnvelope?.Status == OperationState.Planned && cliEnvelope.Data?.Updates.Count == 1,
+                    Detail = $"exit={cliExitCode}; state={cliEnvelope?.Status}; identity={drivers[0].Identity}"
+                });
+            }
+
+            var criteria = await engine.ScanAsync(new ScanRequest { Criteria = "IsInstalled=0 and Type='Software'" }, null, CancellationToken.None).ConfigureAwait(false);
+            report.Operations.Add(new AcceptanceOperation { Name = "validated-criteria-scan", Succeeded = true, Detail = $"{criteria.Count} applicable software update(s)" });
+
+            var services = await engine.GetServicesAsync(CancellationToken.None).ConfigureAwait(false);
+            report.Operations.Add(new AcceptanceOperation { Name = "service-list", Succeeded = true, Detail = $"{services.Count} registered update service(s)" });
+
+            var history = await engine.GetHistoryAsync(25, CancellationToken.None).ConfigureAwait(false);
+            report.Operations.Add(new AcceptanceOperation { Name = "history", Succeeded = true, Detail = $"{history.Count} recent record(s)" });
+
+            if (args.Contains("--install-driver", StringComparer.OrdinalIgnoreCase))
+            {
+                var marker = Array.FindIndex(args, value => string.Equals(value, "--update", StringComparison.OrdinalIgnoreCase));
+                if (!args.Contains("--confirm-machine-mutation", StringComparer.OrdinalIgnoreCase) || marker < 0 || marker + 1 >= args.Length)
+                    throw new InvalidOperationException("Driver installation requires --update <guid>:<revision> and --confirm-machine-mutation on a snapshot-backed test machine.");
+                var key = UpdateKey.Parse(args[marker + 1]);
+                if (!drivers.Any(driver => driver.Identity.Equals(key))) throw new InvalidOperationException("The selected driver identity is not in the current applicable driver scan.");
+                var result = await engine.ExecuteAsync(new UpdateActionRequest { Action = UpdateActionKind.Install, Updates = new[] { key }, AcceptEulas = true }, null, CancellationToken.None).ConfigureAwait(false);
+                report.Operations.Add(new AcceptanceOperation { Name = "explicit-driver-install", Succeeded = result.HResult >= 0, Detail = $"{result.Result}; reboot={result.RebootRequired}" });
+            }
+        }
+        catch (Exception exception)
+        {
+            report.Operations.Add(new AcceptanceOperation { Name = "fatal", Succeeded = false, Detail = exception.ToString() });
+        }
+        report.CompletedUtc = DateTime.UtcNow;
+        var output = args.SkipWhile(value => !string.Equals(value, "--output", StringComparison.OrdinalIgnoreCase)).Skip(1).FirstOrDefault()
+                     ?? Path.Combine(Environment.CurrentDirectory, "artifacts", "acceptance", $"native-wua-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+        using (var stream = File.Create(output)) new DataContractJsonSerializer(typeof(AcceptanceReport)).WriteObject(stream, report);
+        Console.WriteLine(output);
+        return report.Operations.All(operation => operation.Succeeded) ? 0 : 1;
+    }
 }

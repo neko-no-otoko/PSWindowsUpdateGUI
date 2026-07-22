@@ -11,8 +11,9 @@ internal sealed class PortableLogService
 {
     private static readonly Regex[] SecretPatterns =
     {
-        new Regex("(?i)(password|secret|token)\\s*[:=]\\s*[^,;\\s]+", RegexOptions.Compiled),
-        new Regex("(?i)(-Credential\\s+)\\S+", RegexOptions.Compiled)
+        new Regex("(?i)(password|secret|token|authorization)\\s*[:=]\\s*[^,;\\s]+", RegexOptions.Compiled),
+        new Regex("(?i)(-Credential\\s+)\\S+", RegexOptions.Compiled),
+        new Regex("(?i)(Bearer\\s+)\\S+", RegexOptions.Compiled)
     };
 
     private readonly object _sync = new object();
@@ -37,7 +38,9 @@ internal sealed class PortableLogService
         var entry = $"{DateTimeOffset.Now:O} [{category}] {redacted}";
         lock (_sync)
         {
-            File.AppendAllText(CurrentLogPath, entry + Environment.NewLine);
+            try { File.AppendAllText(CurrentLogPath, entry + Environment.NewLine); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         EntryWritten?.Invoke(this, entry);
@@ -47,7 +50,9 @@ internal sealed class PortableLogService
     {
         lock (_sync)
         {
-            return File.Exists(CurrentLogPath) ? File.ReadAllText(CurrentLogPath) : string.Empty;
+            try { return File.Exists(CurrentLogPath) ? File.ReadAllText(CurrentLogPath) : string.Empty; }
+            catch (IOException) { return string.Empty; }
+            catch (UnauthorizedAccessException) { return string.Empty; }
         }
     }
 
@@ -57,7 +62,7 @@ internal sealed class PortableLogService
         {
             foreach (var file in Directory.GetFiles(_logDirectory, "*.log"))
             {
-                File.Delete(file);
+                try { File.Delete(file); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
         }
     }
@@ -75,13 +80,19 @@ internal sealed class PortableLogService
 
     private void Prune()
     {
-        var files = Directory.GetFiles(_logDirectory, "*.log")
+        List<FileInfo> files;
+        try
+        {
+            files = Directory.GetFiles(_logDirectory, "*.log")
             .Select(path => new FileInfo(path))
             .OrderByDescending(file => file.LastWriteTimeUtc)
             .ToList();
+        }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
         foreach (var file in files.Where(file => file.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-_settings.LogRetentionDays)))
         {
-            file.Delete();
+            try { file.Delete(); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
 
         long remaining = Math.Max(1, _settings.LogSizeLimitMb) * 1024L * 1024L;
@@ -90,7 +101,7 @@ internal sealed class PortableLogService
             remaining -= file.Length;
             if (remaining < 0)
             {
-                file.Delete();
+                try { file.Delete(); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
         }
     }

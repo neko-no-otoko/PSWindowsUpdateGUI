@@ -13,7 +13,6 @@ internal sealed class RemotePreflightService
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
 $systemDrive = Get-CimInstance -ClassName Win32_LogicalDisk -Filter ""DeviceID='C:'"" -ErrorAction Stop
-$module = Get-Module -ListAvailable -Name PSWindowsUpdate | Sort-Object Version -Descending | Select-Object -First 1
 $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') -or
                  (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')
 [pscustomobject]@{
@@ -23,8 +22,8 @@ $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Com
     IsAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     PowerShellVersion = $PSVersionTable.PSVersion.ToString()
     ExecutionPolicy = (Get-ExecutionPolicy)
-    ScheduledTasksAvailable = [bool](Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue)
-    ModuleVersion = if ($module) { $module.Version.ToString() } else { 'Not installed' }
+    ScheduledTasksAvailable = Test-Path (Join-Path $env:SystemRoot 'System32\schtasks.exe')
+    ProgramData = $env:ProgramData
     UpdateService = (Get-Service -Name wuauserv -ErrorAction Stop).Status.ToString()
     RebootPending = $rebootPending
     Clock = [DateTimeOffset]::Now.ToString('O')
@@ -33,7 +32,7 @@ $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Com
 
     public RemotePreflightResult Run(string computerName, bool useSsl)
     {
-        RemoteModuleStager.ValidateComputerName(computerName);
+        RemoteCliClient.ValidateComputerName(computerName);
         var result = new RemotePreflightResult(computerName, useSsl);
 
         try
@@ -80,29 +79,32 @@ $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Com
         var powerShellVersion = Read<string>(remote, "PowerShellVersion") ?? string.Empty;
         var tasks = Read<bool>(remote, "ScheduledTasksAvailable");
         var freeSpace = Read<long>(remote, "FreeSpaceBytes");
-        var module = Read<string>(remote, "ModuleVersion") ?? "Not installed";
         var clock = Read<string>(remote, "Clock") ?? "Unknown";
 
         result.Add("Windows 11", build >= 22000, $"Build {build}");
         result.Add("x64 operating system", is64Bit, is64Bit ? "64-bit" : "Unsupported architecture");
         result.Add("Remote administrator token", isAdministrator, isAdministrator ? "Available" : "The remote session is not elevated.");
         result.Add("Windows PowerShell 5.1", powerShellVersion.StartsWith("5.1", StringComparison.Ordinal), powerShellVersion);
-        result.Add("Task Scheduler cmdlets", tasks, tasks ? "Available" : "Register-ScheduledTask was not found.");
+        result.Add("Task Scheduler", tasks, tasks ? "schtasks.exe is available" : "schtasks.exe was not found.");
         result.Add("Execution policy", true, Read<string>(remote, "ExecutionPolicy") ?? "Unknown");
         result.Add("Windows Update service", true, Read<string>(remote, "UpdateService") ?? "Unknown");
         result.Add("Reboot pending", true, Read<bool>(remote, "RebootPending").ToString());
-        result.Add("PSWindowsUpdate module", true, module);
+        result.Add("Native WUA", true, "The staged executable will use the target's Windows Update Agent.");
         result.Add("Target-local clock", true, clock);
         result.Add("System drive free space", freeSpace >= 1_073_741_824L, FormatBytes(freeSpace));
 
         try
         {
-            var moduleRoot = $@"\\{computerName}\C$\Program Files\WindowsPowerShell\Modules";
-            result.Add("SMB module-copy access", Directory.Exists(moduleRoot), moduleRoot);
+            var programData = Read<string>(remote, "ProgramData") ?? @"C:\ProgramData";
+            var driveRoot = Path.GetPathRoot(programData) ?? throw new InvalidDataException("ProgramData is not on a drive-letter path.");
+            var relative = programData.Substring(driveRoot.Length).TrimStart('\\');
+            var uncProgramData = Path.Combine($@"\\{computerName}\{char.ToUpperInvariant(driveRoot[0])}$", relative);
+            var stageRoot = Path.Combine(uncProgramData, "PSWindowsUpdateGUI", "Remote");
+            result.Add("SMB staging access", Directory.Exists(uncProgramData), stageRoot);
         }
         catch (Exception exception)
         {
-            result.Add("SMB module-copy access", false, exception.Message);
+            result.Add("SMB staging access", false, exception.Message);
         }
 
         return result;

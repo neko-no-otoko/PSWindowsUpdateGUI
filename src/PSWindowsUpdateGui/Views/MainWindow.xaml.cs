@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using Microsoft.Win32;
 using PSWindowsUpdateGui.ViewModels;
 
@@ -20,19 +19,22 @@ public partial class MainWindow : Window
         Loaded += async (_, __) => await _viewModel.InitializeAsync().ConfigureAwait(true);
     }
 
-    private void NavigateAdvanced_Click(object sender, RoutedEventArgs e)
+    private void BrowseOfflineCab_Click(object sender, RoutedEventArgs e)
     {
-        MainTabs.SelectedItem = AdvancedTab;
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Offline scan catalog (wsusscn2.cab)|*.cab|All files|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.OfflineCabPath = dialog.FileName;
     }
 
-    private void Credential_Click(object sender, RoutedEventArgs e)
+    private void CliHelp_Click(object sender, RoutedEventArgs e)
     {
-        if (!(sender is Button button) || !(button.DataContext is ParameterInputViewModel input)) return;
-        var dialog = new CredentialDialog(input.Name) { Owner = this };
-        if (dialog.ShowDialog() == true)
-        {
-            input.Credential = dialog.Credential;
-        }
+        MessageBox.Show(
+            "Run PSWindowsUpdateGUI.exe help from an elevated PowerShell or Command Prompt. " +
+            "Use --output json for automation and --plan before modifying commands.",
+            "CLI help", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void ExportLogs_Click(object sender, RoutedEventArgs e)
@@ -52,11 +54,9 @@ public partial class MainWindow : Window
     private void About_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(
-            "PSWindowsUpdate GUI 1.0.0\n\n" +
-            "Portable Windows 11 x64 interface for PSWindowsUpdate 2.2.1.5.\n\n" +
-            "GUI source: MIT License\n" +
-            "PSWindowsUpdate: Copyright Michal Gajda, MIT License\n" +
-            "https://github.com/mgajda83/PSWindowsUpdate",
+            "PSWindowsUpdate GUI 2.0.0-beta.1\n\n" +
+            "Independent portable Windows 11 x64 GUI and CLI built directly on Windows Update Agent.\n\n" +
+            "No PSWindowsUpdate module is installed or loaded. MIT License.",
             "About PSWindowsUpdate GUI",
             MessageBoxButton.OK,
             MessageBoxImage.Information);

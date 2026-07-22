@@ -52,27 +52,35 @@ internal sealed class PortableSettingsService
         }
     }
 
-    public void Save(PortableSettings settings)
+    public bool Save(PortableSettings settings)
     {
         if (IsEphemeral)
         {
-            return;
+            return false;
         }
 
-        var temporary = _settingsPath + ".tmp";
-        using (var stream = File.Create(temporary))
+        var temporary = _settingsPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
         {
-            var serializer = new DataContractJsonSerializer(typeof(PortableSettings));
-            serializer.WriteObject(stream, settings);
-        }
+            using (var stream = File.Create(temporary))
+            {
+                var serializer = new DataContractJsonSerializer(typeof(PortableSettings));
+                serializer.WriteObject(stream, settings);
+            }
 
-        if (File.Exists(_settingsPath))
-        {
-            File.Replace(temporary, _settingsPath, null);
+            if (File.Exists(_settingsPath))
+            {
+                try { File.Replace(temporary, _settingsPath, null); }
+                catch (IOException) { File.Copy(temporary, _settingsPath, true); }
+            }
+            else File.Move(temporary, _settingsPath);
+            return true;
         }
-        else
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+        finally
         {
-            File.Move(temporary, _settingsPath);
+            try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
         }
     }
 }

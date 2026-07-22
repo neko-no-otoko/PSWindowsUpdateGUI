@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using Microsoft.Win32;
+using PSWindowsUpdateGui.Models;
 using PSWindowsUpdateGui.Services;
 using PSWindowsUpdateGui.ViewModels;
 using PSWindowsUpdateGui.Views;
@@ -9,8 +10,7 @@ namespace PSWindowsUpdateGui;
 
 public partial class App : Application
 {
-    private ModuleRuntime? _module;
-    private PowerShellHost? _host;
+    private IWindowsUpdateEngine? _engine;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,9 +33,8 @@ public partial class App : Application
             var settingsService = new PortableSettingsService();
             var settings = settingsService.Load();
             var log = new PortableLogService(settingsService.DataDirectory, settings);
-            _module = ModuleRuntime.Create();
-            _host = new PowerShellHost(_module, log);
-            var viewModel = new MainViewModel(_host, _module, settingsService, settings, log);
+            _engine = new WuaWindowsUpdateEngine();
+            var viewModel = new MainViewModel(_engine, settingsService, settings, log);
             var window = new MainWindow(viewModel);
             MainWindow = window;
             window.Show();
@@ -49,8 +48,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _host?.Dispose();
-        _module?.Dispose();
+        _engine?.Dispose();
         base.OnExit(e);
     }
 
