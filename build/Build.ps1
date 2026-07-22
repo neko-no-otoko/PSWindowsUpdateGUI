@@ -16,10 +16,10 @@ function Invoke-DotNet {
 }
 
 & (Join-Path $PSScriptRoot 'Verify-Vendor.ps1')
-Invoke-DotNet restore (Join-Path $repoRoot 'PSWindowsUpdateGUI.sln') --use-lock-file
-Invoke-DotNet build (Join-Path $repoRoot 'PSWindowsUpdateGUI.sln') -c $Configuration "-p:Version=$Version" --no-restore
+Invoke-DotNet restore (Join-Path $repoRoot 'PSWindowsUpdateGUI.sln') --use-lock-file '-p:Platform=x64'
+Invoke-DotNet build (Join-Path $repoRoot 'PSWindowsUpdateGUI.sln') -c $Configuration "-p:Version=$Version" '-p:Platform=x64' --no-restore
 if (-not $SkipTests) {
-    Invoke-DotNet test (Join-Path $repoRoot 'tests\PSWindowsUpdateGui.Tests\PSWindowsUpdateGui.Tests.csproj') -c $Configuration --logger 'trx;LogFileName=PSWindowsUpdateGui.Tests.trx'
+    Invoke-DotNet test (Join-Path $repoRoot 'tests\PSWindowsUpdateGui.Tests\PSWindowsUpdateGui.Tests.csproj') -c $Configuration '-p:Platform=x64' --logger 'trx;LogFileName=PSWindowsUpdateGui.Tests.trx'
 }
 
 $releaseRoot = Join-Path $repoRoot 'artifacts\release'

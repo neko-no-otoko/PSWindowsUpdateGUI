@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -223,11 +224,15 @@ internal sealed class PowerShellHost : IDisposable
         output.DataAdded += (_, args) =>
         {
             var value = output[args.Index];
-            lock (result.Output)
+            foreach (var item in ExpandOutput(value))
             {
-                result.Output.Add(value);
+                lock (result.Output)
+                {
+                    result.Output.Add(item);
+                }
+
+                Raise(InvocationEventKind.Output, item.ToString());
             }
-            Raise(InvocationEventKind.Output, value.ToString());
         };
 
         using var registration = cancellationToken.Register(() =>
@@ -258,6 +263,23 @@ internal sealed class PowerShellHost : IDisposable
         }
 
         return result;
+    }
+
+    internal static IEnumerable<PSObject> ExpandOutput(PSObject value)
+    {
+        if (value.BaseObject is IEnumerable enumerable &&
+            !(value.BaseObject is string) &&
+            !(value.BaseObject is IDictionary))
+        {
+            foreach (var item in enumerable)
+            {
+                yield return PSObject.AsPSObject(item);
+            }
+
+            yield break;
+        }
+
+        yield return value;
     }
 
     private void HookStreams(PowerShell powerShell, InvocationResult result)

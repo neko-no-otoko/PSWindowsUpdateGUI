@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading;
@@ -70,5 +72,17 @@ public sealed class HostSecurityTests
         }
 
         Assert.IsFalse(result.Succeeded);
+    }
+
+    [TestMethod]
+    public void HostExpandsCollectionOutputIntoIndividualPipelineRecords()
+    {
+        var collection = new ArrayList { "first", "second" };
+        var expanded = PowerShellHost.ExpandOutput(PSObject.AsPSObject(collection)).ToArray();
+
+        Assert.AreEqual(2, expanded.Length);
+        Assert.AreEqual("first", expanded[0].BaseObject);
+        Assert.AreEqual("second", expanded[1].BaseObject);
+        Assert.AreEqual(1, PowerShellHost.ExpandOutput(PSObject.AsPSObject("text")).Count());
     }
 }

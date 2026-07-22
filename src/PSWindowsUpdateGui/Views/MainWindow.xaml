@@ -22,8 +22,8 @@
                 <StackPanel>
                     <TextBlock Text="PSWindowsUpdate GUI" FontSize="22" FontWeight="SemiBold" Foreground="White" />
                     <TextBlock Foreground="#C9D3E7">
-                        <Run Text="Module " /><Run Text="{Binding ModuleVersion}" /><Run Text=" • " />
-                        <Run Text="{Binding Identity}" /><Run Text=" • Administrator" />
+                        <Run Text="Module " /><Run Text="{Binding ModuleVersion, Mode=OneWay}" /><Run Text=" • " />
+                        <Run Text="{Binding Identity, Mode=OneWay}" /><Run Text=" • Administrator" />
                     </TextBlock>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -71,11 +71,11 @@
                               EnableRowVirtualization="True" AutomationProperties.Name="Available Windows updates">
                         <DataGrid.Columns>
                             <DataGridCheckBoxColumn Header="Select" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="60" />
-                            <DataGridTextColumn Header="Computer" Binding="{Binding ComputerName}" IsReadOnly="True" Width="110" />
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" IsReadOnly="True" Width="90" />
-                            <DataGridTextColumn Header="KB" Binding="{Binding KB}" IsReadOnly="True" Width="130" />
-                            <DataGridTextColumn Header="Size" Binding="{Binding Size}" IsReadOnly="True" Width="90" />
-                            <DataGridTextColumn Header="Title" Binding="{Binding Title}" IsReadOnly="True" Width="*" />
+                            <DataGridTextColumn Header="Computer" Binding="{Binding ComputerName, Mode=OneWay}" IsReadOnly="True" Width="110" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" IsReadOnly="True" Width="90" />
+                            <DataGridTextColumn Header="KB" Binding="{Binding KB, Mode=OneWay}" IsReadOnly="True" Width="130" />
+                            <DataGridTextColumn Header="Size" Binding="{Binding Size, Mode=OneWay}" IsReadOnly="True" Width="90" />
+                            <DataGridTextColumn Header="Title" Binding="{Binding Title, Mode=OneWay}" IsReadOnly="True" Width="*" />
                         </DataGrid.Columns>
                     </DataGrid>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
@@ -197,7 +197,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding CommandPreview}" IsReadOnly="True" TextWrapping="Wrap" MinHeight="55" VerticalScrollBarVisibility="Auto"
+                        <TextBox Text="{Binding CommandPreview, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MinHeight="55" VerticalScrollBarVisibility="Auto"
                                  AutomationProperties.Name="Redacted PowerShell command preview" />
                         <Button Grid.Column="1" Content="Run command" Command="{Binding RunAdvancedCommand}" Background="{StaticResource AccentBrush}" Foreground="White" />
                     </Grid>
@@ -211,7 +211,7 @@
                         <Button Content="Export visible log…" Click="ExportLogs_Click" />
                         <Button Content="Clear logs" Command="{Binding ClearLogsCommand}" />
                     </StackPanel>
-                    <TextBox Grid.Row="1" Text="{Binding LogText}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+                    <TextBox Grid.Row="1" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
                              AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
                 </Grid>
             </TabItem>
@@ -222,9 +222,9 @@
             <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" VerticalAlignment="Center" />
             <Button Grid.Column="1" Content="Cancel / stop monitoring" Command="{Binding CancelCommand}" />
         </Grid>
-        <TextBox Grid.Row="3" Margin="8" Text="{Binding OutputText}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+        <TextBox Grid.Row="3" Margin="8" Text="{Binding OutputText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
                  AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                  AutomationProperties.Name="Command output" />
-        <ProgressBar Grid.Row="4" Height="5" Minimum="0" Maximum="100" Value="{Binding Progress}" />
+        <ProgressBar Grid.Row="4" Height="5" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
     </Grid>
 </Window>

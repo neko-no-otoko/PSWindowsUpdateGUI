@@ -490,7 +490,13 @@ internal sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var result = await ExecuteAsync(command, CreateTargetParameters(command), false, $"Running {command}").ConfigureAwait(true);
+        var parameters = CreateTargetParameters(command);
+        if (string.Equals(command, "Get-WURebootStatus", StringComparison.OrdinalIgnoreCase))
+        {
+            parameters["Silent"] = new SwitchParameter(true);
+        }
+
+        var result = await ExecuteAsync(command, parameters, false, $"Running {command}").ConfigureAwait(true);
         if (result != null) OutputText = FormatOutput(result);
     }
 

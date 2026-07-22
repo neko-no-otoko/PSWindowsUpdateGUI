@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using Microsoft.Win32;
 using PSWindowsUpdateGui.Services;
 using PSWindowsUpdateGui.ViewModels;
 using PSWindowsUpdateGui.Views;
@@ -22,9 +23,11 @@ public partial class App : Application
 
         try
         {
-            if (Environment.OSVersion.Version.Build < 22000)
+            var windowsBuild = GetWindowsBuildNumber();
+            if (!Environment.Is64BitOperatingSystem || windowsBuild < 22000)
             {
-                throw new PlatformNotSupportedException("PSWindowsUpdate GUI supports Windows 11 x64 (build 22000 or newer).");
+                throw new PlatformNotSupportedException(
+                    $"PSWindowsUpdate GUI supports Windows 11 x64 (build 22000 or newer). Detected build: {windowsBuild}.");
             }
 
             var settingsService = new PortableSettingsService();
@@ -49,5 +52,13 @@ public partial class App : Application
         _host?.Dispose();
         _module?.Dispose();
         base.OnExit(e);
+    }
+
+    internal static int GetWindowsBuildNumber()
+    {
+        using var localMachine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using var currentVersion = localMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion", false);
+        var value = currentVersion?.GetValue("CurrentBuildNumber")?.ToString();
+        return int.TryParse(value, out var build) ? build : Environment.OSVersion.Version.Build;
     }
 }

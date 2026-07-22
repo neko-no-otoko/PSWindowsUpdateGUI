@@ -17,6 +17,18 @@ build, VM snapshot identifiers, and evidence links in the release issue.
   labels, 200% DPI, and long update titles.
 - Confirm the verified per-run module directory is removed after the process exits.
 
+The optional integration runner uses the same compiled module runtime and PowerShell
+host as the GUI. It records status operations and two driver scans as structured JSON:
+
+```powershell
+dotnet build .\tests\PSWindowsUpdateGui.Acceptance\PSWindowsUpdateGui.Acceptance.csproj -c Release -p:Platform=x64
+Start-Process .\tests\PSWindowsUpdateGui.Acceptance\bin\x64\Release\net48\PSWindowsUpdateGui.Acceptance.exe -Verb RunAs -Wait -ArgumentList '--output=local-acceptance.json --install-first-safe-driver'
+```
+
+The install option excludes firmware/BIOS candidates, selects by exact UpdateID,
+disables automatic reboot, and refuses to install while Windows reports a pending
+reboot. Inspect and retain the generated report with the release evidence.
+
 ## Preconfigured remote VM
 
 - Use Kerberos or certificate-validated WinRM HTTPS; do not add TrustedHosts.

@@ -31,9 +31,24 @@ internal sealed class UpdateRow
             KB = FirstNonEmpty(Read(value, "KB"), Read(value, "KBArticleIDs"), Read(value, "KBArticleID")),
             Size = Read(value, "Size"),
             Title = Read(value, "Title"),
-            UpdateId = FirstNonEmpty(Read(value, "UpdateId"), Read(value, "Identity")),
+            UpdateId = FirstNonEmpty(Read(value, "UpdateId"), ReadNested(value, "Identity", "UpdateID")),
             RawText = value.ToString()
         };
+    }
+
+    private static string ReadNested(PSObject value, string property, string nestedProperty)
+    {
+        try
+        {
+            var raw = value.Properties[property]?.Value;
+            return raw == null
+                ? string.Empty
+                : PSObject.AsPSObject(raw).Properties[nestedProperty]?.Value?.ToString() ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static string Read(PSObject value, string property)
