@@ -11,7 +11,7 @@ credentials, production hostnames, private update history, or exploit details in
 public issue.
 
 Include the affected version, Windows build, reproduction steps, security impact, and
-whether the issue applies to the GUI wrapper or the upstream PSWindowsUpdate module.
+whether the issue applies to WUA execution, remote staging, the CLI, or an administrative service.
 
 ## Release trust
 

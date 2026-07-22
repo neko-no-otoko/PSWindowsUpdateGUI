@@ -1,27 +1,22 @@
-# Parameter coverage
+# Legacy capability migration
 
-The Advanced page derives its forms from the live metadata of the pinned module. The
-catalog test fails if one of these exported commands is unavailable:
+Version 2 preserves user workflows rather than PSWindowsUpdate cmdlet syntax.
 
-| Area | Commands |
+| Former command | Native replacement |
 | --- | --- |
-| Updates | `Get-WindowsUpdate`, `Remove-WindowsUpdate`, `Get-WUOfflineMSU` |
-| Status | `Get-WUApiVersion`, `Get-WUHistory`, `Get-WUInstallerStatus`, `Get-WUJob`, `Get-WULastResults`, `Get-WURebootStatus` |
-| Services/settings | `Add-WUServiceManager`, `Get-WUServiceManager`, `Remove-WUServiceManager`, `Get-WUSettings`, `Set-WUSettings`, `Set-PSWUSettings` |
-| Administration | `Invoke-WUJob`, `Update-WUModule`, `Enable-WURemoting`, `Reset-WUComponents` |
+| `Get-WindowsUpdate` | `scan`, `download`, `install`, `hide`, `unhide` |
+| `Remove-WindowsUpdate` | `uninstall`, with explicit DISM/WUSA package fallback |
+| `Get-WUOfflineMSU` | `download` then `export-payload` |
+| `Get-WUApiVersion`, `Get-WUInstallerStatus`, `Get-WURebootStatus` | `status` |
+| `Get-WUHistory`, `Get-WULastResults` | `history` and operation results |
+| `Get-WUJob`, `Invoke-WUJob` | `job list/create/run/cancel/cleanup` |
+| `Add/Get/Remove-WUServiceManager` | `services add-microsoft-update/list/remove` |
+| `Get-WUSettings`, `Set-WUSettings` | `policy get/set/restore` |
+| `Set-PSWUSettings` | `report configure/test/send` |
+| `Reset-WUComponents` | `maintenance reset-components` |
+| `Enable-WURemoting` | secure preflight and documentation; configuration is never changed automatically |
+| `Update-WUModule` | application release, checksum, and provenance workflow |
 
-Control mapping:
-
-- `SwitchParameter` and `Boolean`: Include plus True/False.
-- `ValidateSet`: dropdown, or validated token input for arrays.
-- numeric ranges: parsed numeric input with runtime range checking.
-- `DateTime`: culture-aware date/time input.
-- arrays: comma, semicolon, or newline-delimited tokens.
-- `PSCredential`: password dialog backed by `SecureString`.
-- `Hashtable`: `Key=Value` pairs separated by semicolons/newlines.
-- paths, criteria, titles, and scripts: text input; title regexes are compiled with a
-  bounded timeout before invocation.
-
-PowerShell plumbing parameters (`ErrorVariable`, `OutVariable`, and similar) are owned
-by the host. The UI exposes `Verbose`, `WhatIf`, module `Debuger`, and replaces
-interactive `Confirm` with graphical confirmation summaries.
+The test catalog contains all 19 former manifest exports and fails on a missing mapping.
+Arbitrary scheduled scripts are deliberately removed; scheduled jobs contain only a
+versioned action, exact update identities, source, timing, EULA choice, and EXE hash.

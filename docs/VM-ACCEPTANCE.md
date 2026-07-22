@@ -1,50 +1,33 @@
 # Windows 11 VM acceptance
 
-Do not create the `v1.0.0` tag until this checklist has been completed against
-snapshot-backed Windows 11 x64 virtual machines. Record the tester, date, Windows
-build, VM snapshot identifiers, and evidence links in the release issue.
+Use clean x64 VMs with snapshots. Never run destructive acceptance on an unsnapshotted
+physical machine.
 
-## Clean local VM
+## Local VM
 
-- Confirm PSWindowsUpdate is not installed in any system or user module path.
-- Copy only `PSWindowsUpdateGUI.exe` to the VM and verify its published SHA-256.
-- Start the application, approve UAC, and verify the displayed identity and elevation.
-- Run scan-only against Windows Update and Microsoft Update without installing a module.
-- Exercise select, download, install, hide, unhide, uninstall, report, and reboot-policy
-  paths with disposable updates and explicit confirmation.
-- Verify cancellation wording, offline behavior, an unwritable EXE directory, log
-  redaction, log retention, exports, high contrast, keyboard-only use, screen reader
-  labels, 200% DPI, and long update titles.
-- Confirm the verified per-run module directory is removed after the process exits.
+- Verify a machine with no PSWindowsUpdate installation launches the single EXE.
+- Run status, default/software/driver scans, history, services, validated criteria, and cancellation.
+- Plan then install one exact software update; verify per-update result and reboot state.
+- Plan then install one exact driver; compare provider/version/date before and after and test snapshot rollback.
+- Test hide/unhide, WUA uninstall where supported, and explicit MSU/CAB fallback.
+- Download/register current `wsusscn2.cab`; confirm security-only results and no payload claim.
+- Download and export payloads to an empty directory; verify Authenticode and SHA-256 manifest behavior.
+- Exercise policy preview/backup/set/restore and recoverable component reset.
+- Exercise scheduled job completion, reboot-required state, cancellation, cleanup, and stale reconciliation.
+- Verify report configuration never writes a password to portable data or logs.
 
-The optional integration runner uses the same compiled module runtime and PowerShell
-host as the GUI. It records status operations and two driver scans as structured JSON:
+## Remote VM
 
-```powershell
-dotnet build .\tests\PSWindowsUpdateGui.Acceptance\PSWindowsUpdateGui.Acceptance.csproj -c Release -p:Platform=x64
-Start-Process .\tests\PSWindowsUpdateGui.Acceptance\bin\x64\Release\net48\PSWindowsUpdateGui.Acceptance.exe -Verb RunAs -Wait -ArgumentList '--output=local-acceptance.json --install-first-safe-driver'
-```
+- Use preconfigured Kerberos and separately certificate-valid HTTPS WinRM.
+- Verify preflight, ACL-restricted staging, remote SHA-256, scan, exact update plan/install,
+  reboot/reconnect, scheduled job monitoring, and owner/hash-checked cleanup.
+- Prove foreign files/markers are preserved and TrustedHosts/firewall/UAC remain unchanged.
 
-The install option excludes firmware/BIOS candidates, selects by exact UpdateID,
-disables automatic reboot, and refuses to install while Windows reports a pending
-reboot. Inspect and retain the generated report with the release evidence.
+## UI and failure recovery
 
-## Preconfigured remote VM
+- Keyboard-only navigation, screen reader labels, high contrast, 100-300% DPI, long titles.
+- Unwritable EXE directory warning, offline operation, service unavailable, invalid criteria,
+  hash/signature failure, timeouts, partial results, and pending reboot.
 
-- Use Kerberos or certificate-validated WinRM HTTPS; do not add TrustedHosts.
-- Confirm name resolution, Windows 11 x64, WinRM, administrator access, Windows
-  PowerShell 5.1, Task Scheduler, SMB administrative-share access, clock, and free space.
-- Run a native remote scan and inspect status/history commands.
-- Confirm an existing matching 2.2.1.5 module is reused without modification.
-- From a clean remote module state, approve staging and verify hashes plus the ownership
-  marker before scheduling download/install work.
-- Verify reconnect/job monitoring and reboot-recursion behavior.
-- After all jobs finish, remove the app-owned copy and confirm a user-managed or
-  nonmatching module is never overwritten or removed.
-- End the session unexpectedly, reconnect, and reconcile the stale owned copy.
-
-## Release gate
-
-- Attach both completed checklists and any deviations to the release issue.
-- Confirm CI, CodeQL, checksum, SPDX SBOM, third-party notices, and provenance.
-- A maintainer creates and pushes `v1.0.0` only after all required items pass.
+Promote the major prerelease only after every applicable item is recorded with VM build,
+snapshot, update identities, result codes, logs, and reviewer sign-off.

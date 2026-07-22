@@ -5,11 +5,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
-- Use the authoritative Windows build value so Windows 11 is detected under .NET Framework compatibility shims.
-- Correct one-way WPF bindings for display-only status, progress, preview, and log fields.
-- Normalize collection-wrapped PSWindowsUpdate results and map nested Windows Update identities into selectable GUI rows.
-- Use silent reboot-status inspection in the hosted runspace and add a guarded local acceptance runner.
-- Force the reproducible release build and test pipeline to compile and package the x64 solution platform.
+- Replace the PSWindowsUpdate wrapper with an independent typed Windows Update Agent engine.
+- Add same-executable GUI and CLI modes with versioned JSON results and stable exit codes.
+- Add GUID-and-revision update selection, async WUA progress/cancellation, offline scans, services, policy, jobs, reporting, maintenance, and payload export.
+- Stage the same verified executable for remote WinRM operations instead of installing a module.
+- Remove the embedded PSWindowsUpdate package and all runtime module extraction/import code.
+- Preserve the former 19-command feature surface as an explicit operation-migration matrix.
 
 ### Added
 

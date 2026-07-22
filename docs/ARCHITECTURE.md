@@ -1,41 +1,27 @@
 # Architecture
 
-## Trust boundaries
+`PSWindowsUpdateGUI.exe` has one entry point. With no arguments it starts WPF; with a
+subcommand it attaches to the parent console and runs headlessly.
 
-The WPF process runs elevated and hosts a Windows PowerShell 5.1 STA runspace. The
-runspace imports only the verified embedded PSWindowsUpdate DLL. A fixed command
-registry allows the 19 public cmdlets; user values are added as typed parameters.
+The typed domain boundary is `IWindowsUpdateEngine`. `WuaWindowsUpdateEngine` owns a
+dedicated background STA dispatcher and serializes operations. All WUA COM objects are
+created, used, cleaned up, and released on that apartment. Searches, downloads,
+installs, and uninstalls use WUA `Begin*` callbacks and `End*` completion calls.
+Cancellation calls the corresponding job's `RequestAbort`; installation cancellation
+remains a request and the final Windows state must be verified.
 
-```text
-WPF controls
-  -> validated invocation dictionary
-    -> allowlisted AddCommand/AddParameter pipeline
-      -> isolated Windows PowerShell 5.1 runspace
-        -> verified PSWindowsUpdate.dll
-          -> Windows Update Agent / WinRM / Task Scheduler
-```
+Build-time interop is generated from `%SystemRoot%\System32\wuapi.dll` by
+`build/Generate-WuaInterop.ps1`. The generated assembly exists only under `obj`; C#
+embeds referenced interop types in the EXE.
 
-The command preview is a renderer for human review. It is never parsed back or used as
-the executable command.
+The WPF view model, CLI, scheduled job runner, and remote worker all use the same
+request models and validation. Update mutations re-scan and match `UpdateID` plus
+revision before constructing a WUA update collection.
 
-## Vendored module
+Remote mode uses built-in Windows PowerShell only as WinRM transport. A fixed embedded
+script receives arguments separately, verifies the staged EXE hash, and invokes its
+CLI on the target. PowerShell is never the update engine.
 
-The original `.nupkg` and a per-file hash manifest are embedded resources. Startup
-copies the package into a randomly named restricted directory, verifies the package,
-performs Zip Slip-safe extraction, verifies each required file, then validates
-Authenticode signatures. The binary is imported by absolute path.
-
-.NET Framework cannot unload an imported assembly. Cleanup is attempted at shutdown;
-a subsequent launch removes stale runtime directories after handles are released.
-
-## Command catalog
-
-The allowlist fixes the public command surface. Runtime `Get-Command` metadata supplies
-parameter sets, mandatory flags, CLR types, validation sets, and validation ranges to
-the Advanced UI. Tests compare this live catalog with all allowlisted commands.
-
-## State
-
-Settings and redacted logs are portable sidecars beside the EXE. Secret values remain
-inside `SecureString`/`PSCredential` instances, except when the user explicitly invokes
-the upstream Credential Manager feature.
+Policy, component maintenance, explicit DISM/WUSA package fallback, scheduling,
+reporting, and payload export are intentionally separate services. This prevents WUA
+operations from becoming a generic privileged script runner.

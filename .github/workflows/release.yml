@@ -47,7 +47,9 @@ jobs:
       - name: Publish GitHub Release
         shell: powershell
         run: |
-          gh release create $env:GITHUB_REF_NAME artifacts/release/* `
-            --verify-tag `
-            --generate-notes `
-            --title "PSWindowsUpdate GUI $env:RELEASE_VERSION"
+          $assets = Get-ChildItem -LiteralPath artifacts/release -File | ForEach-Object FullName
+          $arguments = @('release', 'create', $env:GITHUB_REF_NAME) + $assets + @(
+            '--verify-tag', '--generate-notes', '--title', "PSWindowsUpdate GUI $env:RELEASE_VERSION"
+          )
+          if ($env:RELEASE_VERSION.Contains('-')) { $arguments += '--prerelease' }
+          gh @arguments

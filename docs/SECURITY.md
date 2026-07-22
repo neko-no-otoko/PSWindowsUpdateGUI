@@ -1,29 +1,37 @@
 # Security model
 
-## Defenses
+## Trust boundaries
 
-- Administrator elevation is explicit at process launch.
-- Embedded PSWindowsUpdate package and every required file are SHA-256 pinned.
-- Upstream signed files must report a valid Authenticode signature.
-- A protected random extraction directory prevents lower-privileged replacement.
-- Only 19 public cmdlets are executable through the normal host.
-- Inputs are typed parameters, not generated script source.
-- Execution policy, user profiles, and system module paths remain unchanged locally.
-- Normal credentials stay in memory and all previews/logs redact likely secrets.
-- Remote deletion requires a narrow canonical path and matching ownership marker.
+- The EXE is administrator code and must be obtained from a trusted release.
+- WUA, WinRM, Task Scheduler, DISM, WUSA, and Credential Manager are Windows trust boundaries.
+- Update servers, offline catalogs, remote hosts, SMTP servers, and exported files are external inputs.
 
-## Deliberate high-risk features
+## Controls
 
-The upstream `Invoke-WUJob -Script` parameter is intentionally arbitrary PowerShell.
-The GUI labels it, displays the preview, and requires confirmation. `Set-PSWUSettings`
-can intentionally persist SMTP credentials in Windows Credential Manager.
+- The build verifies Microsoft Authenticode on `wuapi.dll`; WUA validates the Microsoft
+  signature on registered `wsusscn2.cab` catalogs.
+- Update mutations require exact GUID and revision identities and an immediate re-scan.
+- A machine-wide mutex plus WUA `IsBusy` prevents overlapping app modifications.
+- Search criteria have a length-limited allowlisted grammar. Regex evaluation has a timeout.
+- CLI arguments are parsed as data. No update input is interpolated into executable code.
+- Remote scripts are fixed resources with external values passed through `ArgumentList`.
+- Staged remote files and scheduled manifests use SYSTEM/Administrators-only ACLs,
+  ownership markers, executable hashes, schema validation, and narrow paths.
+- Policy names, types, and ranges are allowlisted. A backup is written before application.
+- Component reset renames data stores to recoverable timestamped backups instead of deleting them.
+- Exported WUA payloads are written to an empty directory, hashed, and Authenticode-checked when signable.
+- Passwords are redacted and SMTP secrets exist only in memory or Windows Credential Manager.
+- Raw scripts, execution-policy changes, TrustedHosts changes, and automatic reboot are absent.
 
-## Residual risks
+## Windows Update orchestrator
 
-- The GUI is elevated, so a compromise of the process has administrator impact.
-- The initial public executable is unsigned; checksums and build provenance mitigate
-  distribution tampering but do not replace trusted code signing.
-- Windows Update and third-party update content are governed by the configured update
-  service, not by this GUI.
-- The upstream binary is closed-source in its released package; this project verifies
-  its publisher signature and immutable bytes but cannot independently audit its source.
+Microsoft documents WUA operations as separate from the Windows Settings orchestrator.
+The app displays that limitation, checks WUA installer activity, and never silently
+disables the orchestrator. Administrators must avoid running Windows Settings update
+actions concurrently.
+
+## Cancellation
+
+Read and transfer operations request WUA abort. Installation/uninstallation abort is
+best effort; after commit begins, the UI describes cancellation as stopping monitoring
+and requires the final machine state to be checked.
