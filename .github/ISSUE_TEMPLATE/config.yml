@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: ../../security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Upstream PSWindowsUpdate issues
+    url: https://github.com/mgajda83/PSWindowsUpdate/issues
+    about: Report defects reproduced directly in the upstream module.

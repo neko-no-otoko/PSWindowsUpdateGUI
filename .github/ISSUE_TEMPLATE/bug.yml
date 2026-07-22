@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible PSWindowsUpdate GUI defect.
+title: '[Bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private hostnames, or unredacted production logs.
+  - type: input
+    id: version
+    attributes:
+      label: GUI version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 11 build
+      placeholder: 26100
+    validations:
+      required: true
+  - type: dropdown
+    id: target
+    attributes:
+      label: Target mode
+      options: [Local, Remote]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and redacted log
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials, private hostnames, and confidential update/policy data.
+          required: true
+        - label: I searched existing issues and the troubleshooting guide.
+          required: true
