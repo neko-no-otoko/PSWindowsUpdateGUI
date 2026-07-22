@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Management.Automation;
 
 namespace PSWindowsUpdateGui.Models;
@@ -56,12 +55,32 @@ internal sealed class UpdateRow
         try
         {
             var raw = value.Properties[property]?.Value;
-            if (raw is Array array)
+            if (raw == null)
             {
-                return string.Join(", ", array.Cast<object>());
+                return string.Empty;
             }
 
-            return raw?.ToString() ?? string.Empty;
+            if (!(raw is string))
+            {
+                var enumerator = LanguagePrimitives.GetEnumerator(raw);
+                if (enumerator != null)
+                {
+                    var values = new System.Collections.Generic.List<string>();
+                    while (enumerator.MoveNext())
+                    {
+                        var text = enumerator.Current?.ToString();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            values.Add(text!);
+                        }
+                    }
+
+                    return string.Join(", ", values);
+                }
+            }
+
+            var rendered = raw.ToString() ?? string.Empty;
+            return string.Equals(rendered, "System.__ComObject", StringComparison.Ordinal) ? string.Empty : rendered;
         }
         catch
         {

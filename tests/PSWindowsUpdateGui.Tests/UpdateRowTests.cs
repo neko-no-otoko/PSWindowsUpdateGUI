@@ -20,6 +20,15 @@ public sealed class UpdateRowTests
         Assert.AreEqual("update-123", row.UpdateId);
     }
 
+    [TestMethod]
+    public void MapsCollectionValuedKbArticles()
+    {
+        var value = new PSObject();
+        value.Properties.Add(new PSNoteProperty("KBArticleIDs", new[] { "5000001", "5000002" }));
+
+        Assert.AreEqual("5000001, 5000002", UpdateRow.From(value).KB);
+    }
+
     private sealed class UpdateIdentity
     {
         public string UpdateID { get; set; } = string.Empty;
