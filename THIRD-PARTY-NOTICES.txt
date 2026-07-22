@@ -1,9 +1,7 @@
-PSWindowsUpdateGUI 2.x does not bundle PSWindowsUpdate or another update engine.
+PSWindowsUpdateGUI does not redistribute a third-party update engine or runtime.
 
 The application uses Windows Update Agent (wuapi.dll), Windows PowerShell 5.1 for
 authenticated WinRM transport, and other Windows components already present on the
 supported operating system. Those operating-system components are not redistributed.
 
-Repository history prior to 2.0 contains an embedded copy of PSWindowsUpdate 2.2.1.5,
-copyright Michal Gajda and licensed under the MIT License. No PSWindowsUpdate files are
-present in 2.x source or release assets.
+The release dependency inventory is recorded in the accompanying SPDX SBOM.

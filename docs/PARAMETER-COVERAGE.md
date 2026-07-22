@@ -1,22 +1,21 @@
-# Legacy capability migration
+# Native operation coverage
 
-Version 2 preserves user workflows rather than PSWindowsUpdate cmdlet syntax.
+The GUI, CLI, scheduled runner, and remote worker share typed request models,
+validation, and the operation catalog below.
 
-| Former command | Native replacement |
-| --- | --- |
-| `Get-WindowsUpdate` | `scan`, `download`, `install`, `hide`, `unhide` |
-| `Remove-WindowsUpdate` | `uninstall`, with explicit DISM/WUSA package fallback |
-| `Get-WUOfflineMSU` | `download` then `export-payload` |
-| `Get-WUApiVersion`, `Get-WUInstallerStatus`, `Get-WURebootStatus` | `status` |
-| `Get-WUHistory`, `Get-WULastResults` | `history` and operation results |
-| `Get-WUJob`, `Invoke-WUJob` | `job list/create/run/cancel/cleanup` |
-| `Add/Get/Remove-WUServiceManager` | `services add-microsoft-update/list/remove` |
-| `Get-WUSettings`, `Set-WUSettings` | `policy get/set/restore` |
-| `Set-PSWUSettings` | `report configure/test/send` |
-| `Reset-WUComponents` | `maintenance reset-components` |
-| `Enable-WURemoting` | secure preflight and documentation; configuration is never changed automatically |
-| `Update-WUModule` | application release, checksum, and provenance workflow |
+| Area | Operations | Identification and safety controls |
+| --- | --- | --- |
+| Discovery | `scan` | Typed source and update-type filters, validated WUA criteria, structured results |
+| Update actions | `download`, `install`, `hide`, `unhide` | Exact update GUID and revision, immediate applicability re-scan, EULA gate, plan and confirmation |
+| Removal | `uninstall` | Exact WUA identity and uninstall capability check; explicit package path for DISM/WUSA fallback |
+| Health | `history`, `status` | WUA history, API version, installer activity, last result, reboot state, service health, target clock |
+| Sources | `services` | List sources, register Microsoft Update, or remove an explicitly identified service |
+| Offline | `offline-scan`, `export-payload` | Microsoft signature validation, metadata-only notice, empty export directory, hashes and signature results |
+| Administration | `policy`, `maintenance` | Allowlisted policy schema, preview, backup/restore, recoverable component reset |
+| Automation | `job` | Versioned fixed-action manifest, ACL-restricted storage, EXE hash, exact update identities |
+| Reporting | `report` | Validated SMTP settings, redaction, memory-only or explicitly confirmed Credential Manager secret |
+| Remote execution | Common `--computer` and `--use-ssl` options | Secure WinRM preflight, exact staged EXE hash, ownership marker, no automatic security-policy changes |
 
-The test catalog contains all 19 former manifest exports and fails on a missing mapping.
-Arbitrary scheduled scripts are deliberately removed; scheduled jobs contain only a
-versioned action, exact update identities, source, timing, EULA choice, and EXE hash.
+Catalog tests require all 15 public operation groups to remain unique, documented,
+and non-empty. Scheduled jobs accept only schema-validated fixed operations; executable
+script text is never accepted.

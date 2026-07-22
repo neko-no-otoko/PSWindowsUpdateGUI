@@ -1,8 +1,8 @@
 # PSWindowsUpdate GUI
 
-PSWindowsUpdate GUI 2 is an independent, portable Windows 11 x64 graphical and
-command-line interface for Windows Update Agent (WUA). It does **not** install,
-load, or wrap the PSWindowsUpdate module.
+PSWindowsUpdate GUI 2 is a portable Windows 11 x64 graphical and command-line
+administrator tool built directly on Windows Update Agent (WUA). The release is one
+executable and uses the update engine and .NET Framework already included with Windows.
 
 > [!WARNING]
 > This is an administrator tool. Installing or uninstalling updates, changing
@@ -78,14 +78,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Build.ps1 -Versi
 The build verifies Microsoft Authenticode on the system WUA DLL, generates an
 interop reference from its installed type library, embeds only referenced COM types,
 runs tests, and emits the EXE, checksum, SPDX SBOM, and notices under
-`artifacts\release`. No interop DLL or PSWindowsUpdate package is released.
+`artifacts\release`. No interop DLL or third-party update engine is released.
 
 ## Project status
 
-Version 2 is a major prerelease until local and remote snapshot-backed Windows 11 VM
-acceptance is complete. The physical-machine acceptance runner is read-only unless
-both an exact driver identity and `--confirm-machine-mutation` are supplied.
+Version `2.0.0-beta.1` is the current major prerelease. Promotion to a stable release
+remains gated on local and remote snapshot-backed Windows 11 VM acceptance. The
+physical-machine acceptance runner is read-only unless both an exact driver identity
+and `--confirm-machine-mutation` are supplied.
 
-This project is MIT licensed. Repository history before 2.0 used PSWindowsUpdate
-2.2.1.5 under its separate MIT license; 2.x contains none of its files. This project
-is independent and is not affiliated with the upstream PSWindowsUpdate project.
+The application source is MIT licensed. Release contents and their licenses are
+recorded in the generated SPDX SBOM and `THIRD-PARTY-NOTICES.txt`.

@@ -13,12 +13,14 @@ if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notm
 }
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$forbidden = @(
-    (Join-Path $projectRoot 'src\PSWindowsUpdateGui\Resources\PSWindowsUpdate.2.2.1.5.nupkg'),
-    (Join-Path $projectRoot 'src\PSWindowsUpdateGui\Resources\vendor-manifest.json')
-)
-foreach ($path in $forbidden) {
-    if (Test-Path -LiteralPath $path) { throw "Removed PSWindowsUpdate runtime asset is still present: $path" }
+$resourceRoot = Join-Path $projectRoot 'src\PSWindowsUpdateGui\Resources'
+if (Test-Path -LiteralPath $resourceRoot) {
+    $unexpectedAssets = Get-ChildItem -LiteralPath $resourceRoot -Recurse -File |
+        Where-Object { $_.Extension -in @('.nupkg', '.psd1', '.psm1') }
+    if ($unexpectedAssets) {
+        $paths = ($unexpectedAssets.FullName -join ', ')
+        throw "Bundled update-engine package or PowerShell module assets are not allowed: $paths"
+    }
 }
 
 Write-Host "Verified native Windows Update Agent: $wuapi"

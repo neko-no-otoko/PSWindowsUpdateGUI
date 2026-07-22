@@ -55,8 +55,8 @@ public partial class MainWindow : Window
     {
         MessageBox.Show(
             "PSWindowsUpdate GUI 2.0.0-beta.1\n\n" +
-            "Independent portable Windows 11 x64 GUI and CLI built directly on Windows Update Agent.\n\n" +
-            "No PSWindowsUpdate module is installed or loaded. MIT License.",
+            "Portable Windows 11 x64 GUI and CLI built directly on Windows Update Agent.\n\n" +
+            "Single-executable distribution. MIT License.",
             "About PSWindowsUpdate GUI",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
