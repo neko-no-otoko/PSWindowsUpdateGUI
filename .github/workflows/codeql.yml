@@ -34,7 +34,7 @@ jobs:
 
       - name: Build analyzed source
         shell: powershell
-        run: .\build\Build.ps1 -Configuration Release -Version 2.0.0-beta.1-codeql -SkipTests
+        run: .\build\Build.ps1 -Configuration Release -Version 3.0.0-beta.1-codeql -SkipTests
 
       - name: Analyze
         uses: github/codeql-action/analyze@e0647621c2984b5ed2f768cb892365bf2a616ad1 # v4.37.2

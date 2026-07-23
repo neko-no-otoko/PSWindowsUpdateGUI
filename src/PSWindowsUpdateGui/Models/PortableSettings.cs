@@ -20,4 +20,7 @@ internal sealed class PortableSettings
 
     [DataMember(Name = "logSizeLimitMb", Order = 5)]
     public int LogSizeLimitMb { get; set; } = 25;
+
+    [DataMember(Name = "theme", Order = 6)]
+    public string ThemePreference { get; set; } = "System";
 }

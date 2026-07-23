@@ -8,7 +8,7 @@ validation, and the operation catalog below.
 | Discovery | `scan` | Typed source and update-type filters, validated WUA criteria, structured results |
 | Update actions | `download`, `install`, `hide`, `unhide` | Exact update GUID and revision, immediate applicability re-scan, EULA gate, plan and confirmation |
 | Removal | `uninstall` | Exact WUA identity and uninstall capability check; explicit package path for DISM/WUSA fallback |
-| Health | `history`, `status` | WUA history, API version, installer activity, last result, reboot state, service health, target clock |
+| Health | `history`, `status` | Structured WUA audit history, exact-revision removal planning, API version, installer activity, last result, reboot state, service health, target clock |
 | Sources | `services` | List sources, register Microsoft Update, or remove an explicitly identified service |
 | Offline | `offline-scan`, `export-payload` | Microsoft signature validation, metadata-only notice, empty export directory, hashes and signature results |
 | Administration | `policy`, `maintenance` | Allowlisted policy schema, preview, backup/restore, recoverable component reset |

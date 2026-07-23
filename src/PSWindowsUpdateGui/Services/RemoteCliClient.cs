@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
@@ -19,6 +19,28 @@ internal sealed class RemoteCliClient
 {
     private const string MarkerName = "PSWindowsUpdateGUI.owner";
     private static readonly Regex DnsName = new Regex(@"^(?=.{1,253}$)(?!-)(?:[A-Za-z0-9-]{1,63}\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,62})$", RegexOptions.Compiled);
+
+    private const string TransportScript = @"
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+try {
+  $payload = [Console]::In.ReadToEnd() | ConvertFrom-Json -ErrorAction Stop
+  $scriptText = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$payload.ScriptBase64))
+  $invoke = @{
+    ComputerName = [string]$payload.ComputerName
+    ScriptBlock = [ScriptBlock]::Create($scriptText)
+    ArgumentList = @($payload.Arguments)
+    ErrorAction = 'Stop'
+  }
+  if ([bool]$payload.UseSsl) { $invoke.UseSSL = $true }
+  $values = @(Invoke-Command @invoke)
+  [Console]::Out.Write(($values | ConvertTo-Json -Compress -Depth 12))
+} catch {
+  [Console]::Error.WriteLine($_.Exception.Message)
+  exit 1
+}";
 
     private const string PreflightScript = @"
 param($useSsl)
@@ -58,7 +80,8 @@ $output = & $exePath @arguments 2>&1 | ForEach-Object { $_.ToString() }
     private static int Execute(string[] rawArguments, string computerName, bool useSsl)
     {
         var preflight = Invoke(computerName, useSsl, PreflightScript, useSsl);
-        var remote = preflight.FirstOrDefault() ?? throw new InvalidOperationException("Remote preflight returned no data.");
+        if (preflight.Count == 0) throw new InvalidOperationException("Remote preflight returned no data.");
+        var remote = preflight[0];
         if (!Read<bool>(remote, "Is64Bit") || Read<int>(remote, "OsBuild") < 22000)
             throw new PlatformNotSupportedException("The remote target must be Windows 11 x64.");
         if (!Read<bool>(remote, "IsAdministrator")) throw new UnauthorizedAccessException("The remote WinRM session does not have an administrator token.");
@@ -99,8 +122,9 @@ $output = & $exePath @arguments 2>&1 | ForEach-Object { $_.ToString() }
         {
             forwarded = forwarded.Concat(new[] { "--output", "json" }).ToArray();
         }
-        var result = Invoke(computerName, useSsl, ExecuteScript, remoteDirectory + "\\PSWindowsUpdateGUI.exe", forwarded, hash).FirstOrDefault()
-                     ?? throw new InvalidOperationException("The remote CLI returned no result.");
+        var execution = Invoke(computerName, useSsl, ExecuteScript, remoteDirectory + "\\PSWindowsUpdateGUI.exe", forwarded, hash);
+        if (execution.Count == 0) throw new InvalidOperationException("The remote CLI returned no result.");
+        var result = execution[0];
         var output = Read<string>(result, "Output") ?? string.Empty;
         if (output.Length > 0) Console.WriteLine(output);
         var exitCode = Read<int>(result, "ExitCode");
@@ -121,24 +145,53 @@ $output = & $exePath @arguments 2>&1 | ForEach-Object { $_.ToString() }
         }
     }
 
-    private static IReadOnlyList<PSObject> Invoke(string computerName, bool useSsl, string script, params object[] arguments)
+    internal static IReadOnlyList<JsonElement> Invoke(string computerName, bool useSsl, string script, params object[] arguments)
     {
-        using var powerShell = PowerShell.Create();
-        powerShell.AddCommand("Invoke-Command")
-            .AddParameter("ComputerName", computerName)
-            .AddParameter("ScriptBlock", ScriptBlock.Create(script))
-            .AddParameter("ArgumentList", arguments)
-            .AddParameter("ErrorAction", ActionPreference.Stop);
-        if (useSsl) powerShell.AddParameter("UseSSL", true);
-        var output = powerShell.Invoke();
-        if (powerShell.HadErrors) throw new InvalidOperationException(string.Join(Environment.NewLine, powerShell.Streams.Error.Select(error => error.Exception.Message)));
-        return output;
+        ValidateComputerName(computerName);
+        var powerShellPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+        if (!File.Exists(powerShellPath)) throw new PlatformNotSupportedException("Windows PowerShell 5.1 was not found for the fixed WinRM transport.");
+
+        var encodedTransport = Convert.ToBase64String(Encoding.Unicode.GetBytes(TransportScript));
+        var payload = JsonSerializer.Serialize(new
+        {
+            ComputerName = computerName,
+            UseSsl = useSsl,
+            ScriptBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(script)),
+            Arguments = arguments
+        });
+        var start = new ProcessStartInfo
+        {
+            FileName = powerShellPath,
+            Arguments = "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + encodedTransport,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false),
+            StandardOutputEncoding = new UTF8Encoding(false),
+            StandardErrorEncoding = new UTF8Encoding(false)
+        };
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the fixed Windows PowerShell transport.");
+        process.StandardInput.Write(payload);
+        process.StandardInput.Close();
+        var output = process.StandardOutput.ReadToEnd();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0) throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? "The WinRM transport failed." : error.Trim());
+        if (string.IsNullOrWhiteSpace(output)) return Array.Empty<JsonElement>();
+
+        using var document = JsonDocument.Parse(output.Trim());
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+            return document.RootElement.EnumerateArray().Select(value => value.Clone()).ToArray();
+        if (document.RootElement.ValueKind == JsonValueKind.Null) return Array.Empty<JsonElement>();
+        return new[] { document.RootElement.Clone() };
     }
 
-    private static T Read<T>(PSObject value, string property)
+    internal static T Read<T>(JsonElement value, string property)
     {
-        var raw = value.Properties[property]?.Value;
-        return raw == null ? default! : (T)LanguagePrimitives.ConvertTo(raw, typeof(T));
+        if (!value.TryGetProperty(property, out var raw) || raw.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return default!;
+        return raw.Deserialize<T>()!;
     }
 
     private static string Hash(string path)
@@ -164,7 +217,7 @@ $output = & $exePath @arguments 2>&1 | ForEach-Object { $_.ToString() }
             InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
             PropagationFlags.None,
             AccessControlType.Allow));
-        Directory.SetAccessControl(path, security);
+        new DirectoryInfo(path).SetAccessControl(security);
     }
 
     private static void ReconcileStaleOwned(string remoteRoot, string jobRoot, string currentHash)

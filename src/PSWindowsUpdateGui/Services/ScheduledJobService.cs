@@ -183,7 +183,7 @@ internal sealed class ScheduledJobService
             security.SetAccessRuleProtection(true, false);
             security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
             security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
-            Directory.SetAccessControl(_jobRoot, security);
+            new DirectoryInfo(_jobRoot).SetAccessControl(security);
         }
         catch (PlatformNotSupportedException) { }
     }

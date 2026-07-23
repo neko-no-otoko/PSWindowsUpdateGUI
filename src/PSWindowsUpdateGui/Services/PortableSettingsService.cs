@@ -44,7 +44,9 @@ internal sealed class PortableSettingsService
         {
             using var stream = File.OpenRead(_settingsPath);
             var serializer = new DataContractJsonSerializer(typeof(PortableSettings));
-            return (PortableSettings)(serializer.ReadObject(stream) ?? new PortableSettings());
+            var settings = (PortableSettings)(serializer.ReadObject(stream) ?? new PortableSettings());
+            settings.ThemePreference = AppThemeService.NormalizePreference(settings.ThemePreference);
+            return settings;
         }
         catch
         {

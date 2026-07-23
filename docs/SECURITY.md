@@ -11,10 +11,15 @@
 - The build verifies Microsoft Authenticode on `wuapi.dll`; WUA validates the Microsoft
   signature on registered `wsusscn2.cab` catalogs.
 - Update mutations require exact GUID and revision identities and an immediate re-scan.
+- History-driven removal first runs a non-mutating uninstall plan for the exact installed
+  GUID and revision. The modifying control stays disabled until Windows reports that
+  revision as uninstallable, and changing the target or update source invalidates the plan.
 - A machine-wide mutex plus WUA `IsBusy` prevents overlapping app modifications.
 - Search criteria have a length-limited allowlisted grammar. Regex evaluation has a timeout.
 - CLI arguments are parsed as data. No update input is interpolated into executable code.
-- Remote scripts are fixed resources with external values passed through `ArgumentList`.
+- The WinRM transport script is fixed and encoded by the application. Typed operation
+  data is serialized as JSON over the child process standard-input stream; user values
+  are never appended to the PowerShell command line or interpolated into script text.
 - Staged remote files and scheduled manifests use SYSTEM/Administrators-only ACLs,
   ownership markers, executable hashes, schema validation, and narrow paths.
 - Policy names, types, and ranges are allowlisted. A backup is written before application.

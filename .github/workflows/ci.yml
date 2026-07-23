@@ -37,7 +37,7 @@ jobs:
 
       - name: Verify, build, test, and package
         shell: powershell
-        run: .\build\Build.ps1 -Configuration Release -Version 2.0.0-beta.1-ci
+        run: .\build\Build.ps1 -Configuration Release -Version 3.0.0-beta.1-ci
 
       - name: Upload test results
         if: always()

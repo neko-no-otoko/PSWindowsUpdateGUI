@@ -271,6 +271,12 @@ internal sealed class UpdateSystemStatus
     [DataMember(Name = "updateServiceStatus", Order = 5)] public string UpdateServiceStatus { get; set; } = string.Empty;
     [DataMember(Name = "orchestratorNotice", Order = 6)] public string OrchestratorNotice { get; set; } = string.Empty;
     [DataMember(Name = "localTime", Order = 7)] public DateTimeOffset LocalTime { get; set; }
+
+    [IgnoreDataMember] public bool IsLoaded => LocalTime != default || !string.IsNullOrWhiteSpace(AgentVersion);
+    [IgnoreDataMember] public string AgentVersionDisplay => IsLoaded ? AgentVersion : "Not loaded";
+    [IgnoreDataMember] public string InstallerState => !IsLoaded ? "Not checked" : InstallerBusy ? "Busy" : "Idle";
+    [IgnoreDataMember] public string RebootState => !IsLoaded ? "Not checked" : RebootRequired ? "Required" : "Not required";
+    [IgnoreDataMember] public string LocalTimeDisplay => LocalTime == default ? "Not loaded" : LocalTime.ToString("g");
 }
 
 [DataContract]

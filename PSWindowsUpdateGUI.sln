@@ -11,10 +11,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSWindowsUpdateGui.Acceptance", "tests\PSWindowsUpdateGui.Acceptance\PSWindowsUpdateGui.Acceptance.csproj", "{909A2504-A985-4D80-B925-3A104B7E0B04}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSWindowsUpdateGui.UiSmoke", "tests\PSWindowsUpdateGui.UiSmoke\PSWindowsUpdateGui.UiSmoke.csproj", "{D467FC9B-27B2-4E66-B582-CC94D6F39950}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,24 +57,11 @@ Global
 		{909A2504-A985-4D80-B925-3A104B7E0B04}.Release|Any CPU.Build.0 = Release|x64
 		{909A2504-A985-4D80-B925-3A104B7E0B04}.Release|x86.ActiveCfg = Release|x64
 		{909A2504-A985-4D80-B925-3A104B7E0B04}.Release|x86.Build.0 = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|x64.ActiveCfg = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|x64.Build.0 = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|Any CPU.Build.0 = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|x86.ActiveCfg = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Debug|x86.Build.0 = Debug|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|x64.ActiveCfg = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|x64.Build.0 = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|Any CPU.ActiveCfg = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|Any CPU.Build.0 = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|x86.ActiveCfg = Release|x64
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{909A2504-A985-4D80-B925-3A104B7E0B04} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
-		{D467FC9B-27B2-4E66-B582-CC94D6F39950} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
