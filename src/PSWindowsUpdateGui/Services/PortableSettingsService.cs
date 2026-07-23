@@ -9,9 +9,20 @@ internal sealed class PortableSettingsService
 {
     private readonly string _settingsPath;
 
-    public PortableSettingsService()
+    public PortableSettingsService() : this(null)
     {
-        DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PSWindowsUpdateGUI.Data");
+    }
+
+    internal PortableSettingsService(string? executableDirectory)
+    {
+        var directory = executableDirectory;
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Path.GetDirectoryName(Environment.ProcessPath);
+            if (string.IsNullOrWhiteSpace(directory)) directory = AppContext.BaseDirectory;
+        }
+
+        DataDirectory = Path.Combine(directory, "PSWindowsUpdateGUI.Data");
         _settingsPath = Path.Combine(DataDirectory, "settings.json");
         try
         {

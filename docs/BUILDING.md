@@ -6,11 +6,11 @@ The repository-local SDK can be selected through `DOTNET_EXE`.
 ```powershell
 $env:DOTNET_EXE = (Resolve-Path .\.tools\dotnet\dotnet.exe)
 .\build\Verify-Native.ps1
-.\build\Build.ps1 -Configuration Release -Version 3.0.0-beta.1
+.\build\Build.ps1 -Configuration Release -Version 3.0.0-beta.2
 ```
 
 `Build.ps1` restores locked NuGet dependencies, builds x64 with warnings as errors,
-runs unit tests and a non-elevated production-assembly WinUI smoke capture, publishes
+runs unit tests plus folder-based and extracted-single-file WinUI smoke captures, publishes
 an unpackaged self-contained single EXE, generates SHA-256 and SPDX 2.3 output, and
 copies notices. WUA interop generation reads the installed Microsoft type library; it
 does not download code and its generated DLL is not a release asset.

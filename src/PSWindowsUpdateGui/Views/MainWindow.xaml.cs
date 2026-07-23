@@ -114,7 +114,7 @@ public sealed partial class MainWindow : Window
 
     private async void About_Click(object sender, RoutedEventArgs e) => await _dialogs.ShowMessageAsync(
         "About PSWindowsUpdate GUI",
-        "PSWindowsUpdate GUI 3.0.0-beta.1\n\nPortable Windows 11 x64 GUI and CLI built directly on Windows Update Agent with WinUI 3 and the Windows App SDK.\n\nSingle-file, self-contained distribution. MIT License.");
+        "PSWindowsUpdate GUI 3.0.0-beta.2\n\nPortable Windows 11 x64 GUI and CLI built directly on Windows Update Agent with WinUI 3 and the Windows App SDK.\n\nSingle-file, self-contained distribution. MIT License.");
 
     private void OnClosed(object sender, WindowEventArgs args)
     {

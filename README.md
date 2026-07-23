@@ -82,7 +82,7 @@ and [remote interface restrictions](https://learn.microsoft.com/windows/win32/wu
 
 ```powershell
 $env:DOTNET_EXE = (Resolve-Path .\.tools\dotnet\dotnet.exe)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Build.ps1 -Version 3.0.0-beta.1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Build.ps1 -Version 3.0.0-beta.2
 ```
 
 The build verifies Microsoft Authenticode on the system WUA DLL, generates an
@@ -94,7 +94,7 @@ No interop DLL or third-party update engine is released.
 
 ## Project status
 
-Version `3.0.0-beta.1` is the current major prerelease. Promotion to a stable release
+Version `3.0.0-beta.2` is the current major prerelease. Promotion to a stable release
 remains gated on local and remote snapshot-backed Windows 11 VM acceptance. The
 physical-machine acceptance runner is read-only unless both an exact driver identity
 and `--confirm-machine-mutation` are supplied.

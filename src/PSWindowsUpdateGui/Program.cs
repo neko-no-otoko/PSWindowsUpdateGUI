@@ -18,6 +18,15 @@ internal static class Program
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AttachConsole(uint processId);
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string moduleName);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetModuleFileName(IntPtr module, StringBuilder fileName, int size);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")]
+    private static extern int MessageBox(IntPtr window, string text, string caption, uint type);
+
     [STAThread]
     public static int Main(string[] args)
     {
@@ -28,23 +37,37 @@ internal static class Program
 #endif
         if (isGui)
         {
+            try
+            {
+                ConfigureWindowsAppRuntimeBaseDirectory();
 #if UI_SMOKE
-            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Starting WinUI{Environment.NewLine}");
+                File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"),
+                    $"{DateTime.UtcNow:O} Starting WinUI; AppBase={AppContext.BaseDirectory}; RuntimeBase={Environment.GetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY")}{Environment.NewLine}");
 #endif
-            WinRT.ComWrappersSupport.InitializeComWrappers();
-            Application.Start(initialization =>
+                WinRT.ComWrappersSupport.InitializeComWrappers();
+                Application.Start(initialization =>
+                {
+#if UI_SMOKE
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application callback{Environment.NewLine}");
+#endif
+                    var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                    SynchronizationContext.SetSynchronizationContext(context);
+                    new App();
+                });
+#if UI_SMOKE
+                File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application exited; code={App.ExitCode}{Environment.NewLine}");
+#endif
+                return App.ExitCode;
+            }
+            catch (Exception exception)
             {
 #if UI_SMOKE
-                File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application callback{Environment.NewLine}");
+                try { File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-error.log"), exception.ToString()); }
+                catch { }
 #endif
-                var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
-                SynchronizationContext.SetSynchronizationContext(context);
-                new App();
-            });
-#if UI_SMOKE
-            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application exited; code={App.ExitCode}{Environment.NewLine}");
-#endif
-            return App.ExitCode;
+                _ = MessageBox(IntPtr.Zero, exception.ToString(), "PSWindowsUpdate GUI could not start", 0x00000010);
+                return 1;
+            }
         }
 
         AttachParentConsole();
@@ -54,7 +77,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            var exitCode = IsValidationFailure(exception) ? 2 : 1;
+            var exitCode = CliApplication.IsValidationFailure(exception) ? 2 : 1;
             if (RequestsJson(args))
             {
                 var envelope = new Models.OperationEnvelope<object>
@@ -94,15 +117,25 @@ internal static class Program
         }
     }
 
-    private static bool IsValidationFailure(Exception exception) =>
-        exception is FormatException ||
-        exception is ArgumentException ||
-        exception is PlatformNotSupportedException ||
-        exception is UnauthorizedAccessException ||
-        (exception is InvalidOperationException &&
-         (exception.Message.IndexOf("requires --yes", StringComparison.OrdinalIgnoreCase) >= 0 ||
-          exception.Message.IndexOf("noninteractively", StringComparison.OrdinalIgnoreCase) >= 0 ||
-          exception.Message.IndexOf("preflight", StringComparison.OrdinalIgnoreCase) >= 0));
+    private static void ConfigureWindowsAppRuntimeBaseDirectory()
+    {
+        // In an IncludeAllContentForSelfExtract publish, .NET loads this native module and the
+        // managed app from the bundle extraction directory. Undocked RegFree WinRT must resolve
+        // its manifest and WinUI DLLs there before Application.Start requests a factory.
+        var module = GetModuleHandle("Microsoft.WindowsAppRuntime.dll");
+        if (module == IntPtr.Zero) return;
+
+        var path = new StringBuilder(32768);
+        var length = GetModuleFileName(module, path, path.Capacity);
+        if (length == 0 || length >= path.Capacity) return;
+
+        var directory = Path.GetDirectoryName(path.ToString());
+        if (!string.IsNullOrWhiteSpace(directory) && File.Exists(Path.Combine(directory, "Microsoft.ui.xaml.dll")))
+        {
+            var baseDirectory = Path.EndsInDirectorySeparator(directory) ? directory : directory + Path.DirectorySeparatorChar;
+            Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", baseDirectory);
+        }
+    }
 
     private static bool RequestsJson(string[] args)
     {

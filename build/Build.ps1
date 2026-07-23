@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')] [string] $Configuration = 'Release',
-    [string] $Version = '3.0.0-beta.1',
+    [string] $Version = '3.0.0-beta.2',
     [switch] $SkipTests
 )
 
@@ -41,6 +41,7 @@ New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
 
 Invoke-DotNet restore (Join-Path $repoRoot 'src\PSWindowsUpdateGui\PSWindowsUpdateGui.csproj') -r win-x64 --locked-mode '-p:Platform=x64' '-p:SelfContained=true'
+if (Test-Path -LiteralPath $generatedManifest) { Remove-Item -LiteralPath $generatedManifest -Force }
 Invoke-DotNet publish (Join-Path $repoRoot 'src\PSWindowsUpdateGui\PSWindowsUpdateGui.csproj') -c $Configuration -r win-x64 --self-contained true --no-restore '-p:Platform=x64' "-p:Version=$Version" '-p:WindowsPackageType=None' '-p:WindowsAppSDKSelfContained=true' '-p:PublishSingleFile=true' '-p:IncludeAllContentForSelfExtract=true' '-p:EnableMsixTooling=true' '-p:PublishTrimmed=false' '-p:PublishReadyToRun=false' '-o' $publishRoot
 
 $source = Join-Path $publishRoot 'PSWindowsUpdateGUI.exe'

@@ -14,6 +14,8 @@ namespace PSWindowsUpdateGui.Cli;
 
 internal sealed class CliApplication
 {
+    private const int WuaInvalidCriteria = unchecked((int)0x80240032);
+
     public async Task<int> RunAsync(string[] rawArguments)
     {
         var arguments = CliArguments.Parse(rawArguments);
@@ -42,7 +44,7 @@ internal sealed class CliApplication
             case "unhide":
                 return await ModifyAsync(engine, arguments, command).ConfigureAwait(false);
             case "history":
-                return await ReadAsync(() => engine.GetHistoryAsync(arguments.GetInt("limit", 100), CancellationToken.None), arguments).ConfigureAwait(false);
+                return await ReadAsync(async () => (await engine.GetHistoryAsync(arguments.GetInt("limit", 100), CancellationToken.None).ConfigureAwait(false)).ToList(), arguments).ConfigureAwait(false);
             case "status":
                 return await ReadAsync(() => engine.GetStatusAsync(CancellationToken.None), arguments).ConfigureAwait(false);
             case "services":
@@ -81,7 +83,7 @@ internal sealed class CliApplication
         }
 
         return await RunEnvelopeAsync(
-            () => engine.ScanAsync(request, CreateProgress(arguments), CancellationToken.None),
+            async () => (await engine.ScanAsync(request, CreateProgress(arguments), CancellationToken.None).ConfigureAwait(false)).ToList(),
             arguments,
             data => $"{data.Count} update(s) found.{Environment.NewLine}" + string.Join(Environment.NewLine, data.Select(FormatUpdate))).ConfigureAwait(false);
     }
@@ -124,7 +126,7 @@ internal sealed class CliApplication
     private static async Task<int> ServicesAsync(IWindowsUpdateEngine engine, CliArguments arguments)
     {
         var verb = arguments.Positionals.Count > 1 ? arguments.Positionals[1].ToLowerInvariant() : "list";
-        if (verb == "list") return await ReadAsync(() => engine.GetServicesAsync(CancellationToken.None), arguments).ConfigureAwait(false);
+        if (verb == "list") return await ReadAsync(async () => (await engine.GetServicesAsync(CancellationToken.None).ConfigureAwait(false)).ToList(), arguments).ConfigureAwait(false);
         if (verb == "add-microsoft-update")
         {
             var plan = arguments.Has("plan");
@@ -270,6 +272,7 @@ internal sealed class CliApplication
         Func<T, OperationState>? classify = null)
     {
         var envelope = new OperationEnvelope<T>();
+        var validationFailure = false;
         try
         {
             envelope.Data = await action().ConfigureAwait(false);
@@ -283,6 +286,7 @@ internal sealed class CliApplication
         catch (Exception exception)
         {
             envelope.Status = OperationState.Failed;
+            validationFailure = IsValidationFailure(exception);
             envelope.Errors.Add(ToError(exception));
         }
         envelope.CompletedUtc = DateTime.UtcNow;
@@ -290,15 +294,28 @@ internal sealed class CliApplication
         if (IsJson(arguments)) Serialize(Console.Out, envelope);
         else if (envelope.Data != null) Console.WriteLine(render(envelope.Data));
         foreach (var error in envelope.Errors) Console.Error.WriteLine($"ERROR {error.Code}: {error.Message}");
-        return ExitCode(envelope.Status);
+        return validationFailure ? 2 : ExitCode(envelope.Status);
     }
 
     private static OperationError ToError(Exception exception) => new OperationError
     {
         Code = $"0x{exception.HResult:X8}",
         HResult = exception.HResult,
-        Message = PortableLogService.Redact(exception.Message)
+        Message = exception.HResult == WuaInvalidCriteria
+            ? "The WUA search criteria is invalid."
+            : PortableLogService.Redact(exception.Message)
     };
+
+    internal static bool IsValidationFailure(Exception exception) =>
+        exception is FormatException ||
+        exception is ArgumentException ||
+        exception is PlatformNotSupportedException ||
+        exception is UnauthorizedAccessException ||
+        exception.HResult == WuaInvalidCriteria ||
+        (exception is InvalidOperationException &&
+         (exception.Message.IndexOf("requires --yes", StringComparison.OrdinalIgnoreCase) >= 0 ||
+          exception.Message.IndexOf("noninteractively", StringComparison.OrdinalIgnoreCase) >= 0 ||
+          exception.Message.IndexOf("preflight", StringComparison.OrdinalIgnoreCase) >= 0));
 
     private static int ExitCode(OperationState state)
     {
@@ -345,10 +362,18 @@ internal sealed class CliApplication
 
     private static void Serialize<T>(TextWriter writer, T value)
     {
-        var serializer = new DataContractJsonSerializer(typeof(T), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
+        writer.WriteLine(SerializeJson(value));
+    }
+
+    internal static string SerializeJson<T>(T value)
+    {
+        var serializer = new DataContractJsonSerializer(typeof(T), new DataContractJsonSerializerSettings
+        {
+            UseSimpleDictionaryFormat = true
+        });
         using var stream = new MemoryStream();
         serializer.WriteObject(stream, value);
-        writer.WriteLine(Encoding.UTF8.GetString(stream.ToArray()));
+        return Encoding.UTF8.GetString(stream.ToArray());
     }
 
     private static string FormatUpdate(UpdateRecord update)
@@ -377,7 +402,7 @@ internal sealed class CliApplication
 
     private static void WriteHelp()
     {
-        Console.WriteLine("PSWindowsUpdateGUI 2 - independent Windows Update Agent GUI and CLI");
+        Console.WriteLine("PSWindowsUpdateGUI 3.0.0-beta.2 - independent Windows Update Agent GUI and CLI");
         Console.WriteLine();
         Console.WriteLine("Usage: PSWindowsUpdateGUI.exe <command> [options]");
         Console.WriteLine("Commands: scan, download, install, uninstall, hide, unhide, history, status,");

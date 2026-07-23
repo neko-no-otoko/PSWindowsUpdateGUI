@@ -5,6 +5,27 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+## [3.0.0-beta.2] - 2026-07-23
+
+### Fixed
+
+- Fix the published single-file EXE failing before the first window with WinUI
+  activation error `0x80040111` by regenerating the registration-free activation
+  manifest after folder builds and before every single-file publish.
+- Resolve registration-free WinUI resources from the extracted runtime directory
+  and display a native diagnostic dialog for failures that occur before `App` starts.
+- Keep portable settings and logs beside the downloaded EXE rather than inside the
+  temporary .NET bundle extraction directory.
+- Serialize scan, history, and service collections correctly in CLI JSON output and
+  report the current 3.0 prerelease in CLI help.
+- Identify new WUA operations as `PSWindowsUpdateGUI/3`, and return the documented
+  validation exit code and message for malformed WUA search criteria.
+
+### Added
+
+- Add a release-blocking extracted-single-file GUI smoke test in addition to the
+  existing folder-based dark and light WinUI smoke captures.
+
 ## [3.0.0-beta.1] - 2026-07-22
 
 ### Changed
