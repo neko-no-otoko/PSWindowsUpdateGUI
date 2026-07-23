@@ -20,6 +20,9 @@ try {
     if ($manifest -notmatch 'name="PSWindowsUpdateGUI\.app"') { throw 'Published executable does not contain the production application identity.' }
     if ($manifest -notmatch 'level="requireAdministrator"') { throw 'Published executable does not require administrator elevation.' }
     if ($manifest -match 'UiSmoke|level="asInvoker"') { throw 'Published executable contains the test-only smoke manifest.' }
+    if ($manifest -notmatch 'loadFrom="%MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY%Microsoft\.ui\.xaml\.dll"') {
+        throw 'Published executable is missing the extracted single-file WinUI activation mapping.'
+    }
 }
 finally {
     if (Test-Path -LiteralPath $inspectionPath) { Remove-Item -LiteralPath $inspectionPath -Force }

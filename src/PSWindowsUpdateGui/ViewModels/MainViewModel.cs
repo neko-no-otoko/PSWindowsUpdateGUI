@@ -118,7 +118,7 @@ internal sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand ClearLogsCommand { get; }
 
     public string ProductTitle => "PSWindowsUpdate GUI";
-    public string EngineVersion => "Native WUA engine 3.0.0-beta.1";
+    public string EngineVersion => "Native WUA engine 3.0.0-beta.2";
     public string Identity => _identityOverride ?? WindowsIdentity.GetCurrent().Name;
     public bool IsElevated { get { if (_elevationOverride.HasValue) return _elevationOverride.Value; using var identity = WindowsIdentity.GetCurrent(); return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator); } }
     public string ElevationDisplay => IsElevated ? "Administrator" : "Not elevated (UI smoke test only)";

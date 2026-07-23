@@ -16,7 +16,7 @@ namespace PSWindowsUpdateGui.Services;
 internal sealed class WuaWindowsUpdateEngine : IWindowsUpdateEngine
 {
     internal const string MicrosoftUpdateServiceId = "7971f918-a847-4430-9279-4a52d1efe18d";
-    private const string ClientId = "PSWindowsUpdateGUI/2";
+    private const string ClientId = "PSWindowsUpdateGUI/3";
     private readonly StaComWorker _worker = new StaComWorker("PSWindowsUpdateGUI WUA COM");
     private readonly SemaphoreSlim _operationGate = new SemaphoreSlim(1, 1);
     private bool _disposed;
