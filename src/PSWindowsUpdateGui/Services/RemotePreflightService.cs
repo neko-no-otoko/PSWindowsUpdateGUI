@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
 using System.Net;
+using System.Text.Json;
 
 namespace PSWindowsUpdateGui.Services;
 
@@ -46,25 +46,11 @@ $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Com
             return result;
         }
 
-        PSObject remote;
+        JsonElement remote;
         try
         {
-            using var powerShell = PowerShell.Create();
-            powerShell.AddCommand("Invoke-Command")
-                .AddParameter("ComputerName", computerName)
-                .AddParameter("ScriptBlock", ScriptBlock.Create(ProbeScript))
-                .AddParameter("ErrorAction", ActionPreference.Stop);
-            if (useSsl)
-            {
-                powerShell.AddParameter("UseSSL", true);
-            }
-
-            remote = powerShell.Invoke().FirstOrDefault() ?? throw new InvalidOperationException("The remote probe returned no data.");
-            if (powerShell.HadErrors)
-            {
-                throw new InvalidOperationException(string.Join(Environment.NewLine, powerShell.Streams.Error.Select(error => error.ToString())));
-            }
-
+            remote = RemoteCliClient.Invoke(computerName, useSsl, ProbeScript).FirstOrDefault();
+            if (remote.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null) throw new InvalidOperationException("The remote probe returned no data.");
             result.Add(useSsl ? "WinRM HTTPS" : "WinRM Kerberos/Negotiate", true, "Connected with normal certificate and authentication validation.");
         }
         catch (Exception exception)
@@ -110,16 +96,7 @@ $rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Com
         return result;
     }
 
-    private static T Read<T>(PSObject value, string property)
-    {
-        var raw = value.Properties[property]?.Value;
-        if (raw == null)
-        {
-            return default!;
-        }
-
-        return (T)LanguagePrimitives.ConvertTo(raw, typeof(T));
-    }
+    private static T Read<T>(JsonElement value, string property) => RemoteCliClient.Read<T>(value, property);
 
     private static string FormatBytes(long bytes) => $"{bytes / 1024d / 1024d / 1024d:N1} GiB";
 }

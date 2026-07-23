@@ -5,7 +5,8 @@ physical machine.
 
 ## Local VM
 
-- Verify a machine with no PSWindowsUpdate installation launches the single EXE.
+- Verify a clean Windows 11 machine launches the single EXE without installing an
+  application runtime, update engine, or supporting files.
 - Run status, default/software/driver scans, history, services, validated criteria, and cancellation.
 - Plan then install one exact software update; verify per-update result and reboot state.
 - Plan then install one exact driver; compare provider/version/date before and after and test snapshot rollback.

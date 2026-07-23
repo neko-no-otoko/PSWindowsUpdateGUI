@@ -198,7 +198,7 @@ internal static class CredentialStore
         if (!CredRead(target, GenericCredential, 0, out var pointer)) return null;
         try
         {
-            var credential = (NativeCredential)Marshal.PtrToStructure(pointer, typeof(NativeCredential));
+            var credential = Marshal.PtrToStructure<NativeCredential>(pointer);
             var password = credential.CredentialBlob == IntPtr.Zero ? string.Empty : Marshal.PtrToStringUni(credential.CredentialBlob, credential.CredentialBlobSize / 2) ?? string.Empty;
             return new NetworkCredential(credential.UserName, password);
         }

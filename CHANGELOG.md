@@ -5,20 +5,42 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
-- Replace the PSWindowsUpdate wrapper with an independent typed Windows Update Agent engine.
-- Add same-executable GUI and CLI modes with versioned JSON results and stable exit codes.
-- Add GUID-and-revision update selection, async WUA progress/cancellation, offline scans, services, policy, jobs, reporting, maintenance, and payload export.
-- Stage the same verified executable for remote WinRM operations instead of installing a module.
-- Remove the embedded PSWindowsUpdate package and all runtime module extraction/import code.
-- Preserve the former 19-command feature surface as an explicit operation-migration matrix.
+## [3.0.0-beta.1] - 2026-07-22
+
+### Changed
+
+- Migrate the complete desktop shell from WPF/.NET Framework 4.8 to WinUI 3 on .NET
+  10 and Windows App SDK 2.3.1.
+- Publish an unpackaged, framework-self-contained, single-file Windows 11 x64 EXE;
+  no permanent runtime, package, or update module installation is required.
+- Replace the WPF dispatcher dependency in the WUA worker with an owning native STA
+  message pump and move fixed WinRM transport to built-in Windows PowerShell 5.1.
+- Redesign History & Status with compact status cards, an inline typed history table,
+  selected-entry details, and exact-revision removal or driver rollback verification.
+- Add native System, Light, and Dark WinUI themes, Mica, themed title bar, modern
+  controls, semantic resources, and Windows high-contrast fallback.
 
 ### Added
 
-- Portable elevated Windows 11 WPF application.
-- Guided local and native remote update workflows.
-- Metadata-driven coverage of all PSWindowsUpdate 2.2.1.5 public cmdlets.
-- Signed vendor verification, redacted logging, tests, SBOM, CI, and release automation.
+- Add a production-assembly WinUI smoke mode with a fake WUA adapter, test-only
+  non-elevated manifest, dark-theme screenshot, and no machine mutations.
+- Pin .NET 10, Windows App SDK 2.3.1, and Windows SDK BuildTools 10.0.28000.2270.
 
-## [1.0.0] - Unreleased
+### Removed
 
-- Initial public release after clean local and remote VM acceptance.
+- Remove WPF, .NET Framework, GAC PowerShell automation assembly, and the obsolete
+  cross-assembly UI smoke host from the product and build.
+
+
+## [2.0.0-beta.1] - 2026-07-21
+
+### Added
+
+- Portable, elevated Windows 11 x64 WPF application and same-executable CLI.
+- Typed Windows Update Agent engine with asynchronous search, download, install, and
+  uninstall operations selected by update GUID and revision.
+- Software and driver workflows, update history and status, service management,
+  Microsoft-signed offline catalogs, payload export, policy backup and restore,
+  component maintenance, scheduled jobs, SMTP reporting, and secure remote execution.
+- Versioned JSON results, stable exit codes, mutation plans, explicit confirmation
+  gates, redacted logs, locked dependencies, tests, SPDX SBOM, CI, and release provenance.

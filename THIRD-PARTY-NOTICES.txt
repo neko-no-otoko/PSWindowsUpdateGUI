@@ -1,9 +1,16 @@
-PSWindowsUpdateGUI 2.x does not bundle PSWindowsUpdate or another update engine.
+PSWindowsUpdateGUI does not redistribute a third-party update engine.
+
+The self-contained executable redistributes the Microsoft .NET 10 runtime, Windows
+App SDK 2.3.1 runtime files, and System.ServiceProcess.ServiceController 10.0. These
+Microsoft open-source components are distributed under the MIT License. Their exact
+package versions and relationships are recorded in the accompanying SPDX SBOM.
 
 The application uses Windows Update Agent (wuapi.dll), Windows PowerShell 5.1 for
 authenticated WinRM transport, and other Windows components already present on the
 supported operating system. Those operating-system components are not redistributed.
 
-Repository history prior to 2.0 contains an embedded copy of PSWindowsUpdate 2.2.1.5,
-copyright Michal Gajda and licensed under the MIT License. No PSWindowsUpdate files are
-present in 2.x source or release assets.
+Project and license information:
+
+- https://github.com/dotnet/runtime
+- https://github.com/microsoft/WindowsAppSDK
+- https://licenses.nuget.org/MIT

@@ -27,13 +27,20 @@ internal static class RemoteGuiBridge
 
     public static async Task<UpdateActionResult> ExecuteAsync(UpdateActionRequest request, string computerName, bool useSsl, CancellationToken cancellationToken)
     {
+        var arguments = BuildExecuteArguments(request, computerName, useSsl);
+        var envelope = await RunAsync<UpdateActionResult>(arguments, cancellationToken).ConfigureAwait(false);
+        return envelope.Data ?? throw new InvalidDataException("The remote update operation returned no result data.");
+    }
+
+    internal static List<string> BuildExecuteArguments(UpdateActionRequest request, string computerName, bool useSsl)
+    {
         var arguments = new List<string> { request.Action.ToString().ToLowerInvariant(), "--computer", computerName, "--source", FormatSource(request.Source), "--output", "json", "--yes" };
         if (useSsl) arguments.Add("--use-ssl");
         if (request.AcceptEulas) arguments.Add("--accept-eula");
         if (request.Force) arguments.Add("--force");
+        if (request.PlanOnly) arguments.Add("--plan");
         foreach (var update in request.Updates) { arguments.Add("--update"); arguments.Add(update.ToString()); }
-        var envelope = await RunAsync<UpdateActionResult>(arguments, cancellationToken).ConfigureAwait(false);
-        return envelope.Data ?? throw new InvalidDataException("The remote update operation returned no result data.");
+        return arguments;
     }
 
     public static async Task<UpdateSystemStatus> StatusAsync(string computerName, bool useSsl, CancellationToken cancellationToken)

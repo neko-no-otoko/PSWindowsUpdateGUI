@@ -3,6 +3,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Threading;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using PSWindowsUpdateGui.Cli;
 using PSWindowsUpdateGui.Services;
 
@@ -18,11 +21,30 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Length == 0 || (args.Length == 1 && string.Equals(args[0], "gui", StringComparison.OrdinalIgnoreCase)))
+        var isGui = args.Length == 0 || (args.Length == 1 && string.Equals(args[0], "gui", StringComparison.OrdinalIgnoreCase));
+#if UI_SMOKE
+        isGui = isGui || UiSmokeBootstrap.TryConfigure(args);
+        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Program configured; isGui={isGui}{Environment.NewLine}");
+#endif
+        if (isGui)
         {
-            var application = new App();
-            application.InitializeComponent();
-            return application.Run();
+#if UI_SMOKE
+            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Starting WinUI{Environment.NewLine}");
+#endif
+            WinRT.ComWrappersSupport.InitializeComWrappers();
+            Application.Start(initialization =>
+            {
+#if UI_SMOKE
+                File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application callback{Environment.NewLine}");
+#endif
+                var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                SynchronizationContext.SetSynchronizationContext(context);
+                new App();
+            });
+#if UI_SMOKE
+            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ui-smoke-trace.log"), $"{DateTime.UtcNow:O} Application exited; code={App.ExitCode}{Environment.NewLine}");
+#endif
+            return App.ExitCode;
         }
 
         AttachParentConsole();
